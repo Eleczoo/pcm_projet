@@ -1,6 +1,3 @@
-// compiler avec:
-// g++ -o atomic atomic.cpp
-
 #include <iostream>
 #include <cstdint>
 
@@ -18,7 +15,6 @@ public:
 
 	// construct an atomic_stamped
 	// with initial values for pointer and stamp
-
 	atomic_stamped(T* ptr, uint64_t stamp)
 	{
 		set(ptr, stamp);
@@ -30,7 +26,6 @@ public:
 	// next is the new pointer value
 	// stamp is the current stamp value
 	// nstamp is the new stamp value
-
 	bool cas(T* curr, T* next, uint64_t stamp, uint64_t nstamp)
 	{
 		__ref c, n;
@@ -63,26 +58,4 @@ public:
 		u.pair.stamp = stamp;
 		__atomic_store(&ref.val, &u.val, __ATOMIC_RELAXED);
 	}
-			
 };
-
-int main()
-{
-	std::string sa = "a";
-	atomic_stamped<std::string> ar(&sa, 10);
-
-	uint64_t stamp;
-	std::string* sp = ar.get(stamp);
-	std::cout << "(start) string = " << *sp << " stamp = " << stamp << '\n';
-
-	std::string sb = "b";
-	bool c = ar.cas(&sa, &sb, 10, 12);
-	sp = ar.get(stamp);
-	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
-
-	c = ar.cas(&sa, &sb, 10, 12);
-	sp = ar.get(stamp);
-	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
-
-	return 0;
-}

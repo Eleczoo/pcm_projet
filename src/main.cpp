@@ -5,6 +5,7 @@
 //
 
 #include "graph.hpp"
+#include "atomic.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
 
@@ -51,13 +52,13 @@ static void branch_and_bound(Path* current)
 		// this is a leaf
 		current->add(0);
 		if (global.verbose & VER_COUNTERS)
-			global.counter.verified ++;
+			global.counter.verified++;
 		if (current->distance() < global.shortest->distance()) {
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			global.shortest->copy(current);
 			if (global.verbose & VER_COUNTERS)
-				global.counter.found ++;
+				global.counter.found++;
 		}
 		current->pop();
 	} else {
@@ -76,7 +77,7 @@ static void branch_and_bound(Path* current)
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
 			if (global.verbose & VER_COUNTERS)
-				global.counter.bound[current->size()] ++;
+				global.counter.bound[current->size()]++;
 		}
 	}
 }
@@ -118,43 +119,64 @@ void print_counters()
 	std::cout << "check: total " << (global.total==(global.counter.verified + equiv) ? "==" : "!=") << " verified + total bound equivalent\n";
 }
 
-int main(int argc, char* argv[])
+//int main(int argc, char* argv[])
+//{
+//	char* fname = 0;
+//	if (argc == 2) {
+//		fname = argv[1];
+//		global.verbose = VER_NONE;
+//	} else {
+//		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v') {
+//			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
+//			fname = argv[2];
+//		} else {
+//			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
+//			exit(1);
+//		}
+//	}
+
+//	Graph* g = TSPFile::graph(fname);
+//	if (global.verbose & VER_GRAPH)
+//		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
+
+//	if (global.verbose & VER_COUNTERS)
+//		reset_counters(g->size());
+
+//	global.shortest = new Path(g);
+//	for (int i=0; i<g->size(); i++) {
+//		global.shortest->add(i);
+//	}
+//	global.shortest->add(0);
+
+//	Path* current = new Path(g);
+//	current->add(0);
+//	branch_and_bound(current);
+
+//	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+//	if (global.verbose & VER_COUNTERS)
+//		print_counters();
+
+//	return 0;
+//}
+
+int main()
 {
-	char* fname = 0;
-	if (argc == 2) {
-		fname = argv[1];
-		global.verbose = VER_NONE;
-	} else {
-		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v') {
-			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
-			fname = argv[2];
-		} else {
-			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
-			exit(1);
-		}
-	}
+	std::string sa = "a";
+	atomic_stamped<std::string> ar(&sa, 10);
 
-	Graph* g = TSPFile::graph(fname);
-	if (global.verbose & VER_GRAPH)
-		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
+	uint64_t stamp;
+	std::string* sp = ar.get(stamp);
+	std::cout << "(start) string = " << *sp << " stamp = " << stamp << '\n';
 
-	if (global.verbose & VER_COUNTERS)
-		reset_counters(g->size());
+	std::string sb = "b";
+	bool c = ar.cas(&sa, &sb, 10, 12);
+	sp = ar.get(stamp);
+	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
 
-	global.shortest = new Path(g);
-	for (int i=0; i<g->size(); i++) {
-		global.shortest->add(i);
-	}
-	global.shortest->add(0);
-
-	Path* current = new Path(g);
-	current->add(0);
-	branch_and_bound(current);
-
-	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-
-	if (global.verbose & VER_COUNTERS)
-		print_counters();
+	c = ar.cas(&sa, &sb, 10, 12);
+	sp = ar.get(stamp);
+	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
 
 	return 0;
 }

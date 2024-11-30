@@ -2,22 +2,27 @@
 CFLAGS=-O3 -Wall
 LDFLAGS=-O3 -lm
 
-all: tspcc atomic
+#all: main fifo atomic 
+all: main 
 
-tspcc: build/tspcc.o
-	c++ -o build/tspcc $(LDFLAGS) build/tspcc.o
+main: build/main.o
+	c++ -o build/main $(LDFLAGS) build/main.o -latomic
 
-build/tspcc.o: src/tspcc.cpp src/graph.hpp src/path.hpp src/tspfile.hpp
-	c++ $(CFLAGS) -c src/tspcc.cpp -o $@
+#build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/fifo.hpp src/atomic.hpp
+build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp
+	c++ $(CFLAGS) -c src/main.cpp -o $@ -latomic
 
-atomic: src/atomic.cpp
-	g++ -o build/atomic src/atomic.cpp -latomic
+#atomic: src/atomic.cpp
+#	g++ -o build/atomic src/atomic.cpp -latomic
+
+#fifo: src/fifo.cpp
+#	g++ -o build/fifo src/fifo.cpp
 
 omp:
-	make tspcc CFLAGS="-fopenmp -O3" LDFLAGS="-fopenmp -O3"
+	make main CFLAGS="-fopenmp -O3" LDFLAGS="-fopenmp -O3"
 
 clean:
-	rm -f build/*.o build/tspcc build/atomic
+	rm -f build/*.o build/main build/atomic
 
 run:
-	./build/tspcc ./data/dj17.tsp
+	./build/main ./data/dj17.tsp

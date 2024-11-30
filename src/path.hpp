@@ -14,6 +14,7 @@ private:
 	int _size;
 	int _distance;
 	int* _nodes;
+	int _nodes_bitfield;
 	Graph* _graph;
 public:
 	~Path()
@@ -28,6 +29,7 @@ public:
 	{
 		_graph = graph;
 		_nodes = new int[max() + 1];
+		_nodes_bitfield = 0;
 		_distance = 0;
 		clear();
 	}
@@ -47,6 +49,7 @@ public:
 				_distance += distance;
 			}
 			_nodes[_size ++] = node;
+			_nodes_bitfield |= 1 << node;
 		}
 	}
 
@@ -58,16 +61,18 @@ public:
 				int node = _nodes[_size - 1];
 				int distance = _graph->distance(node, last);
 				_distance -= distance;
+				_nodes_bitfield &= ~(1 << node);
 			}
 		}
 	}
 
 	bool contains(int node) const
 	{
-		for (int i=0; i<_size; i++)
-			if (_nodes[i] == node)
-				return true;
-		return false;
+		//for (int i=0; i<_size; i++)
+		//	if (_nodes[i] == node)
+		//		return true;
+		//return false;
+		return (_nodes_bitfield & (1 << node));
 	}
 
 	void copy(Path* o)
@@ -79,6 +84,7 @@ public:
 		_graph = o->_graph;
 		_size = o->_size;
 		_distance = o->_distance;
+		_nodes_bitfield = o->_nodes_bitfield;
 		for (int i=0; i<_size; i++)
 			_nodes[i] = o->_nodes[i];
 	}
