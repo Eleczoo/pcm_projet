@@ -47,13 +47,17 @@ public:
 
 private:
 
-	const DATA val_head = SENTINEL_HEAD;
-	const DATA val_tail = SENTINEL_TAIL;
+	DATA val_head = SENTINEL_HEAD;
+	DATA val_tail = SENTINEL_TAIL;
 
 	//Node ntail;
 	//Node nhead;
 	Node ntail = Node(&val_tail, nullptr);
 	Node nhead = Node(&val_head, &ntail);
+
+	// ! Free nodes list head and tail with stamped pointers
+	Node free2 = Node();
+	Node free1 = Node(&free2);
 
 	atomic_stamped<Node> fifo[2];
 	atomic_stamped<Node> free_nodes[2];
@@ -69,14 +73,8 @@ LockFreeQueue::LockFreeQueue()
 	// ! FIFO is actually the head and the tail
 	// ! OF THE FIFO
 
-
-
 	fifo[0].set(&nhead, 0); 
 	fifo[1].set(&ntail, 1);
-
-	// ! Free nodes list head and tail with stamped pointers
-	Node free2 = Node();
-	Node free1 = Node(&free2);
 
 	free_nodes[0].set(&free1, 0); 
 	free_nodes[1].set(&free2, 1);
@@ -149,11 +147,11 @@ void LockFreeQueue::show_queue()
 	while (current != fifo[TAIL].get(stamp_osef))
 	{
 		std::cout << "Value[" << i++ << "] = " << *current->value << std::endl;
-		//std::cout << current->next << std::endl;
+		std::cout << "NEXT : " << current->next << std::endl;
 		current = current->next;
-		if(current == 0)
-			break;
+
 	}
+	std::cout << "TAIL[" << i << "] = " << *current->value << std::endl;
 	std::cout << "End of queue" << std::endl;
 }
 
