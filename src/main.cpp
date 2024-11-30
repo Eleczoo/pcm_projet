@@ -213,10 +213,21 @@ void worker_routine()
 int main()
 {
 	DATA data = 12;
+	DATA data2 = 69;
 
 	LockFreeQueue fifo = LockFreeQueue();
-	//fifo.enqueue(&data);
+
+	std::cout << "-----" << std::endl;
+	fifo.show_queue();
+	std::cout << "-----" << std::endl;
+
+	fifo.enqueue(&data);
+	fifo.show_queue();
+	std::cout << "-----" << std::endl;
+
+	fifo.enqueue(&data2);
+	fifo.show_queue();
+	std::cout << "-----" << std::endl;
 	
 	// std::cout << "show_queue" << std::endl;
-	fifo.show_queue();
 }

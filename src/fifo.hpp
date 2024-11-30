@@ -78,26 +78,25 @@ LockFreeQueue::LockFreeQueue()
 
 	free_nodes[0].set(&free1, 0); 
 	free_nodes[1].set(&free2, 1);
-
 }
 
 LockFreeQueue::~LockFreeQueue()
 {
 	uint64_t stamp_osef;
-	delete fifo[HEAD].get(stamp_osef);
-	delete free_nodes[HEAD].get(stamp_osef);
+	//delete fifo[HEAD].get(stamp_osef);
+	//delete free_nodes[HEAD].get(stamp_osef);
 }
 
 
 bool LockFreeQueue::enqueue(DATA* value)
 {
 
-	std::cout << "Enqueuing: " << *value << std::endl;
+	//std::cout << "Enqueuing: " << *value << std::endl;
 	Node* node = __get_free_node();
 	if (!node) return false;
 
 	node->value = value;
-	std::cout << "Node value: " << *node->value << std::endl;
+	//std::cout << "Node value: " << *node->value << std::endl;
 	__enqueue_node(fifo, node);
 	return true;
 }
@@ -141,17 +140,19 @@ void LockFreeQueue::show_queue()
 
 	Node* current = fifo[HEAD].get(stamp_osef);
 	Node* tail = fifo[TAIL].get(stamp_osef);
-
-	std::cout << current << std::endl;
-	std::cout << tail << std::endl;
+	
 	while (current != fifo[TAIL].get(stamp_osef))
 	{
 		std::cout << "Value[" << i++ << "] = " << *current->value << std::endl;
-		std::cout << "NEXT : " << current->next << std::endl;
+		//std::cout << "NEXT : " << current->next << std::endl;
 		current = current->next;
 
+		// print current and tail
+		//std::cout << "CURRENT = " << current << std::endl;
+		//std::cout << "TAIL = " << tail << std::endl;
+
 	}
-	std::cout << "TAIL[" << i << "] = " << *current->value << std::endl;
+	std::cout << "TAIL = " << *current->value << std::endl;
 	std::cout << "End of queue" << std::endl;
 }
 
@@ -198,11 +199,12 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 
 	while (true)
 	{
-		last = queue[TAIL].get(last_stamp);
-		next = last->next;
+	last = queue[TAIL].get(last_stamp);
+	next = last->next;
 
 		if (last == queue[TAIL].get(last_stamp))
 		{
+			// ! If the last node is 
 			if (!next)
 			{
 				if (queue[TAIL].cas(last, node, last_stamp, last_stamp + 1)) 
@@ -216,7 +218,9 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			}
 		}
 	}
-	queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
+	//queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
+	
+	last->next = node;
 }
 
 
