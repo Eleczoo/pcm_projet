@@ -3,13 +3,13 @@ CFLAGS=-O3 -Wall
 LDFLAGS=-O3 -lm
 
 #all: main fifo atomic 
-all: main 
+all: main
 
 main: build/main.o
 	c++ -o build/main $(LDFLAGS) build/main.o -latomic
 
 #build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/fifo.hpp src/atomic.hpp
-build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp
+build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp src/fifo.hpp
 	c++ $(CFLAGS) -c src/main.cpp -o $@ -latomic
 
 #atomic: src/atomic.cpp

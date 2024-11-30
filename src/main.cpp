@@ -8,6 +8,7 @@
 #include "atomic.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
+#include "fifo.hpp"
 
 
 enum Verbosity {
@@ -119,64 +120,83 @@ void print_counters()
 	std::cout << "check: total " << (global.total==(global.counter.verified + equiv) ? "==" : "!=") << " verified + total bound equivalent\n";
 }
 
-//int main(int argc, char* argv[])
-//{
-//	char* fname = 0;
-//	if (argc == 2) {
-//		fname = argv[1];
-//		global.verbose = VER_NONE;
-//	} else {
-//		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v') {
-//			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
-//			fname = argv[2];
-//		} else {
-//			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
-//			exit(1);
-//		}
-//	}
-
-//	Graph* g = TSPFile::graph(fname);
-//	if (global.verbose & VER_GRAPH)
-//		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
-
-//	if (global.verbose & VER_COUNTERS)
-//		reset_counters(g->size());
-
-//	global.shortest = new Path(g);
-//	for (int i=0; i<g->size(); i++) {
-//		global.shortest->add(i);
-//	}
-//	global.shortest->add(0);
-
-//	Path* current = new Path(g);
-//	current->add(0);
-//	branch_and_bound(current);
-
-//	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-
-//	if (global.verbose & VER_COUNTERS)
-//		print_counters();
-
-//	return 0;
-//}
-
-int main()
+int main(int argc, char* argv[])
 {
-	std::string sa = "a";
-	atomic_stamped<std::string> ar(&sa, 10);
+	char* fname = 0;
+	if (argc == 2) 
+	{
+		fname = argv[1];
+		global.verbose = VER_NONE;
+	} 
+	else 
+	{
+		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v')
+		{
+			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
+			fname = argv[2];
+		} 
+		else
+		{
+			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
+			exit(1);
+		}
+	}
 
-	uint64_t stamp;
-	std::string* sp = ar.get(stamp);
-	std::cout << "(start) string = " << *sp << " stamp = " << stamp << '\n';
+	Graph* g = TSPFile::graph(fname);
+	if (global.verbose & VER_GRAPH)
+		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
 
-	std::string sb = "b";
-	bool c = ar.cas(&sa, &sb, 10, 12);
-	sp = ar.get(stamp);
-	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
+	if (global.verbose & VER_COUNTERS)
+		reset_counters(g->size());
 
-	c = ar.cas(&sa, &sb, 10, 12);
-	sp = ar.get(stamp);
-	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
+	global.shortest = new Path(g);
+	for (int i=0; i<g->size(); i++) 
+	{
+		global.shortest->add(i);
+	}
+	global.shortest->add(0);
+
+	Path* current = new Path(g);
+	current->add(0);
+	branch_and_bound(current);
+
+
+	// fifo.push(current)
+	// start all threads
+
+	// TODO: 
+	// 1. Create all the possible sub-path and push them in the fifo
+	//	for x in range(1, n-1):
+	//		fifo.add(current.copy().add(x))
+
+	// 2. 	
+
+	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+	if (global.verbose & VER_COUNTERS)
+		print_counters();
 
 	return 0;
 }
+
+
+// int main()
+// {
+// 	std::string sa = "a";
+// 	atomic_stamped<std::string> ar(&sa, 10);
+
+// 	uint64_t stamp;
+// 	std::string* sp = ar.get(stamp);
+// 	std::cout << "(start) string = " << *sp << " stamp = " << stamp << '\n';
+
+// 	std::string sb = "b";
+// 	bool c = ar.cas(&sa, &sb, 10, 12);
+// 	sp = ar.get(stamp);
+// 	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
+
+// 	c = ar.cas(&sa, &sb, 10, 12);
+// 	sp = ar.get(stamp);
+// 	std::cout << "(cas=" << c << ") string = " << *sp << " stamp = " << stamp << '\n';
+
+// 	return 0;
+// }
