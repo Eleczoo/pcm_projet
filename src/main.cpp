@@ -120,63 +120,70 @@ void print_counters()
 	std::cout << "check: total " << (global.total==(global.counter.verified + equiv) ? "==" : "!=") << " verified + total bound equivalent\n";
 }
 
-int main(int argc, char* argv[])
+// int main(int argc, char* argv[])
+// {
+// 	char* fname = 0;
+// 	if (argc == 2) 
+// 	{
+// 		fname = argv[1];
+// 		global.verbose = VER_NONE;
+// 	} 
+// 	else 
+// 	{
+// 		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v')
+// 		{
+// 			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
+// 			fname = argv[2];
+// 		} 
+// 		else
+// 		{
+// 			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
+// 			exit(1);
+// 		}
+// 	}
+
+// 	Graph* g = TSPFile::graph(fname);
+// 	if (global.verbose & VER_GRAPH)
+// 		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
+
+// 	if (global.verbose & VER_COUNTERS)
+// 		reset_counters(g->size());
+
+// 	global.shortest = new Path(g);
+// 	for (int i=0; i<g->size(); i++) 
+// 	{
+// 		global.shortest->add(i);
+// 	}
+// 	global.shortest->add(0);
+
+// 	Path* current = new Path(g);
+// 	current->add(0);
+// 	branch_and_bound(current);
+
+
+// 	// fifo.push(current)
+// 	// start all threads
+
+// 	// TODO: 
+// 	// 1. Create all the possible sub-path and push them in the fifo
+// 	//	for x in range(1, n-1):
+// 	//		fifo.add(current.copy().add(x))
+
+// 	// 2. 
+
+// 	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+// 	if (global.verbose & VER_COUNTERS)
+// 		print_counters();
+
+// 	return 0;
+// }
+
+
+void worker_routine()
 {
-	char* fname = 0;
-	if (argc == 2) 
-	{
-		fname = argv[1];
-		global.verbose = VER_NONE;
-	} 
-	else 
-	{
-		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v')
-		{
-			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
-			fname = argv[2];
-		} 
-		else
-		{
-			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
-			exit(1);
-		}
-	}
-
-	Graph* g = TSPFile::graph(fname);
-	if (global.verbose & VER_GRAPH)
-		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
-
-	if (global.verbose & VER_COUNTERS)
-		reset_counters(g->size());
-
-	global.shortest = new Path(g);
-	for (int i=0; i<g->size(); i++) 
-	{
-		global.shortest->add(i);
-	}
-	global.shortest->add(0);
-
-	Path* current = new Path(g);
-	current->add(0);
-	branch_and_bound(current);
-
-
-	// fifo.push(current)
-	// start all threads
-
-	// TODO: 
-	// 1. Create all the possible sub-path and push them in the fifo
-	//	for x in range(1, n-1):
-	//		fifo.add(current.copy().add(x))
-
-	// 2. 	
-
-	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-
-	if (global.verbose & VER_COUNTERS)
-		print_counters();
-
-	return 0;
+	// ! Try to get a job from the fifo
+	// 
 }
 
 
@@ -200,3 +207,16 @@ int main(int argc, char* argv[])
 
 // 	return 0;
 // }
+
+
+
+int main()
+{
+	DATA data = 12;
+
+	LockFreeQueue fifo = LockFreeQueue();
+	//fifo.enqueue(&data);
+	
+	// std::cout << "show_queue" << std::endl;
+	fifo.show_queue();
+}

@@ -23,6 +23,12 @@ public:
 		set(ptr, stamp);
 	}
 
+	// ! Default constructor
+	atomic_stamped()
+	{
+		set(nullptr, 0);
+	}
+
 
 	// compare and set
 	// curr is the current pointer value

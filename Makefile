@@ -24,5 +24,5 @@ omp:
 clean:
 	rm -f build/*.o build/main build/atomic
 
-run:
+run: all
 	./build/main ./data/dj17.tsp

@@ -7,16 +7,30 @@
 #define HEAD 0
 #define TAIL 1
 
+#define SENTINEL_HEAD 0xFFFF5555
+#define SENTINEL_TAIL 0xFFFFAAAA
+
 typedef uint64_t DATA;
 
-struct Node
+class Node
 {
+public:
 	DATA* value;
 	Node* next;
 
 	Node() {
 		value = nullptr;
 		next = nullptr;
+	}
+
+	Node(Node* next) {
+		value = nullptr;
+		this->next = next;
+	}
+
+	Node(DATA* value, Node* next) {
+		this->value = value;
+		this->next = next;
 	}
 };
 
@@ -28,38 +42,45 @@ public:
 
 	bool enqueue(DATA* value);
 	DATA* dequeue();
+	void show_queue();
 
 
 private:
 
-	// ! FIFO is actually the head and the tail
-	// ! OF THE FIFO
-	atomic_stamped<Node> fifo[2] = { 
-		atomic_stamped<Node>(new Node(), 0), 
-		atomic_stamped<Node>(new Node(), 1) 
-	};
+	const DATA val_head = SENTINEL_HEAD;
+	const DATA val_tail = SENTINEL_TAIL;
 
-	// ! Free nodes list head and tail with stamped pointers
-	atomic_stamped<Node> free_nodes[2] = { 
-		atomic_stamped<Node>(new Node(), 0), 
-		atomic_stamped<Node>(new Node(), 1) 
-	};
+	//Node ntail;
+	//Node nhead;
+	Node ntail = Node(&val_tail, nullptr);
+	Node nhead = Node(&val_head, &ntail);
+
+	atomic_stamped<Node> fifo[2];
+	atomic_stamped<Node> free_nodes[2];
 
 	// ! Prototypes
-	Node* get_free_node();
+	Node* __get_free_node();
 	void free_node(Node* node);
-	void enqueue_node(atomic_stamped<Node>* queue, Node* node);
+	void __enqueue_node(atomic_stamped<Node>* queue, Node* node);
 };
 
 LockFreeQueue::LockFreeQueue()
 {
-	Node* node = new Node();
-	fifo[HEAD].set(node, 0);
-	fifo[TAIL].set(node, 0);
-	
-	Node* free_node = new Node();
-	free_nodes[HEAD].set(free_node, 0);
-	free_nodes[TAIL].set(free_node, 0);
+	// ! FIFO is actually the head and the tail
+	// ! OF THE FIFO
+
+
+
+	fifo[0].set(&nhead, 0); 
+	fifo[1].set(&ntail, 1);
+
+	// ! Free nodes list head and tail with stamped pointers
+	Node free2 = Node();
+	Node free1 = Node(&free2);
+
+	free_nodes[0].set(&free1, 0); 
+	free_nodes[1].set(&free2, 1);
+
 }
 
 LockFreeQueue::~LockFreeQueue()
@@ -72,11 +93,14 @@ LockFreeQueue::~LockFreeQueue()
 
 bool LockFreeQueue::enqueue(DATA* value)
 {
-	Node* node = get_free_node();
+
+	std::cout << "Enqueuing: " << *value << std::endl;
+	Node* node = __get_free_node();
 	if (!node) return false;
 
 	node->value = value;
-	enqueue_node(fifo, node);
+	std::cout << "Node value: " << *node->value << std::endl;
+	__enqueue_node(fifo, node);
 	return true;
 }
 
@@ -112,7 +136,28 @@ DATA* LockFreeQueue::dequeue()
 	}
 }
 
-Node* LockFreeQueue::get_free_node()
+void LockFreeQueue::show_queue()
+{
+	uint64_t stamp_osef;
+	uint64_t i = 0;
+
+	Node* current = fifo[HEAD].get(stamp_osef);
+	Node* tail = fifo[TAIL].get(stamp_osef);
+
+	std::cout << current << std::endl;
+	std::cout << tail << std::endl;
+	while (current != fifo[TAIL].get(stamp_osef))
+	{
+		std::cout << "Value[" << i++ << "] = " << *current->value << std::endl;
+		//std::cout << current->next << std::endl;
+		current = current->next;
+		if(current == 0)
+			break;
+	}
+	std::cout << "End of queue" << std::endl;
+}
+
+Node* LockFreeQueue::__get_free_node()
 {
 	Node* first;
 	Node* last;
@@ -142,10 +187,10 @@ Node* LockFreeQueue::get_free_node()
 
 void LockFreeQueue::free_node(Node* node)
 {
-	enqueue_node(free_nodes, node);
+	__enqueue_node(free_nodes, node);
 }
 
-void LockFreeQueue::enqueue_node(atomic_stamped<Node>* queue, Node* node)
+void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 {
 	Node* last;
 	Node* next;
@@ -162,8 +207,12 @@ void LockFreeQueue::enqueue_node(atomic_stamped<Node>* queue, Node* node)
 		{
 			if (!next)
 			{
-				if (queue[TAIL].cas(last, node, last_stamp, last_stamp + 1)) break;
-			} else
+				if (queue[TAIL].cas(last, node, last_stamp, last_stamp + 1)) 
+				{
+					break;
+				}
+			} 
+			else
 			{
 				queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
@@ -171,5 +220,7 @@ void LockFreeQueue::enqueue_node(atomic_stamped<Node>* queue, Node* node)
 	}
 	queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
 }
+
+
 
 #endif // __FIFO_HPP__
