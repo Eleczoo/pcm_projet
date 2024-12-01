@@ -1,14 +1,11 @@
-//
-//  tspcc.cpp
-//  
-//  Copyright (c) 2022 Marcelo Pasin. All rights reserved.
-//
-
+#include <thread>
 #include "graph.hpp"
 #include "atomic.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
 #include "fifo.hpp"
+
+#define NB_THREADS 10
 
 
 enum Verbosity {
@@ -33,6 +30,7 @@ static struct {
 	int* fact;
 } global;
 
+
 static const struct {
 	char RED[6];
 	char BLUE[6];
@@ -43,6 +41,137 @@ static const struct {
 	.ORIGINAL = { 27, '[', '3', '9', 'm', 0 },
 };
 
+LockFreeQueue g_fifo;
+Graph* g_graph;
+
+// ! PROTOTYPES
+void worker_routine();
+static void branch_and_bound(Path* current);
+void reset_counters(int size);
+void print_counters();
+
+int main(int argc, char* argv[])
+{
+	char* fname = 0;
+	if (argc == 2) 
+	{
+		fname = argv[1];
+		global.verbose = VER_NONE;
+	} 
+	else 
+	{
+		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v')
+		{
+			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
+			fname = argv[2];
+		} 
+		else
+		{
+			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
+			exit(1);
+		}
+	}
+
+	g_graph = TSPFile::graph(fname);
+	if (global.verbose & VER_GRAPH)
+		std::cout << COLOR.BLUE << g_graph << COLOR.ORIGINAL;
+
+	// if (global.verbose & VER_COUNTERS)
+	reset_counters(g_graph->size());
+
+	global.shortest = new Path(g_graph);
+	for (int i=0; i<g_graph->size(); i++) 
+	{
+		global.shortest->add(i);
+	}
+	global.shortest->add(0);
+
+	Path* current = new Path(g_graph);
+	current->add(0);
+	//branch_and_bound(current);
+
+	// ! Create the FIFO
+	g_fifo = LockFreeQueue();
+	g_fifo.enqueue(current);
+
+	// ! WORKERS
+	std::cout << "Starting " << NB_THREADS << " threads\n";
+	std::thread workers[NB_THREADS];
+	for (int i = 0; i < NB_THREADS; i++)
+		workers[i] = std::thread(worker_routine);
+	
+	for (int i = 0; i < NB_THREADS; i++)
+		workers[i].join();
+
+	// ! CLEANUP
+	delete global.shortest;
+	delete current;
+	delete g_graph;
+
+	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+	if (global.verbose & VER_COUNTERS)
+		print_counters();
+
+	return 0;
+}
+
+
+void worker_routine()
+{
+	std::cout << "here" << std::endl;
+	Path* p;
+	Path* new_p;
+	while(1)
+	{
+		// if we processed every possible path, stop the threads
+		int cleared_paths = 0;
+		for (int i=0; i<global.size; i++) 
+		{
+			int e = global.fact[i] * global.counter.bound[i];
+			cleared_paths += e;
+		}
+
+		std::cout << "here2" << std::endl;
+
+
+		if((global.counter.verified + cleared_paths) >= global.total)
+			break;
+
+		std::cout << "cleared_paths: " << cleared_paths << std::endl;
+
+		// ! 1. Dequeue a job
+		do
+		{
+			p = g_fifo.dequeue();
+		} while (p != nullptr);
+
+		std::cout << "dequeue" << std::endl;
+
+		// ? Check if the distance is already bigger than the min
+		if (p->distance() > global.shortest->distance()) { continue; }
+
+		// ! 2. Check if we need to split the job
+		if (p->size() == (p->max() - 5))
+		{
+			// Do the job ourselves
+			branch_and_bound(p);
+		}
+		else
+		{
+			// Split the job
+			for(int x = 0; x < g_graph->size(); x++)
+			{
+				new_p = new Path(g_graph);
+				p->copy(new_p);
+				if (!p->contains(x))
+				{
+					g_fifo.enqueue(new_p);
+				}
+			}
+		}
+	}
+}
 
 static void branch_and_bound(Path* current)
 {
@@ -120,74 +249,14 @@ void print_counters()
 	std::cout << "check: total " << (global.total==(global.counter.verified + equiv) ? "==" : "!=") << " verified + total bound equivalent\n";
 }
 
-int main(int argc, char* argv[])
-{
-	char* fname = 0;
-	if (argc == 2) 
-	{
-		fname = argv[1];
-		global.verbose = VER_NONE;
-	} 
-	else 
-	{
-		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v')
-		{
-			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
-			fname = argv[2];
-		} 
-		else
-		{
-			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
-			exit(1);
-		}
-	}
-
-	Graph* g = TSPFile::graph(fname);
-	if (global.verbose & VER_GRAPH)
-		std::cout << COLOR.BLUE << g << COLOR.ORIGINAL;
-
-	if (global.verbose & VER_COUNTERS)
-		reset_counters(g->size());
-
-	global.shortest = new Path(g);
-	for (int i=0; i<g->size(); i++) 
-	{
-		global.shortest->add(i);
-	}
-	global.shortest->add(0);
-
-	Path* current = new Path(g);
-	current->add(0);
-	branch_and_bound(current);
-
-
-	// fifo.push(current)
-	// start all threads
-
-	// TODO: 
-	// 1. Create all the possible sub-path and push them in the fifo
-	//	for x in range(1, n-1):
-	//		fifo.add(current.copy().add(x))
-
-	// 2. 
-
-	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-
-	if (global.verbose & VER_COUNTERS)
-		print_counters();
-
-	return 0;
-}
-
-
-void worker_routine()
-{
-	// ! Try to get a job from the fifo
-	// 
-}
 
 
 
+
+
+
+
+// ! GRAVEYARD
 
 // int main()
 // {

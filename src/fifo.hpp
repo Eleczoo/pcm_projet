@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "atomic.hpp"
+#include "path.hpp"
 
 #define HEAD 0
 #define TAIL 1
@@ -10,7 +11,7 @@
 #define SENTINEL_HEAD 0xFFFF5555
 #define NB_FREE_NODES 256
 
-typedef uint64_t DATA;
+typedef Path DATA;
 
 class Node
 {
@@ -47,7 +48,7 @@ public:
 
 private:
 
-	DATA val_head = SENTINEL_HEAD;
+	DATA val_head;
 
 	Node sentinel = Node(&val_head, nullptr);
 
@@ -120,45 +121,56 @@ DATA* LockFreeQueue::dequeue()
 
 		if (first == fifo[HEAD].get(first_stamp))
 		{
+
+			// ! If the queue is empty
 			if (first == last)
 			{
-				if (!next) return nullptr;
+				if (!next) 
+					return nullptr;
+
+				// ! Finish the operation for the other thread
 				fifo[TAIL].cas(last, next, last_stamp, last_stamp + 1);
-			} else
+			} 
+			else
 			{
 				DATA* value = next->value;
-				if (fifo[HEAD].cas(first, next, first_stamp, first_stamp + 1))
-				{
-					free_node(first);
-					return value;
-				}
+				// Point the head to its next's next node
+				fifo[HEAD].next = fifo[HEAD].next->next;
+				free_node(next);
+				return value;
+				// if (fifo[HEAD].cas(first, next, first_stamp, first_stamp + 1))
+				// {
+					// free_node(first);
+					// return value;
+				// }
 			}
 		}
 	}
 }
 
-void LockFreeQueue::show_queue()
-{
-	uint64_t stamp_osef;
-	uint64_t i = 0;
+// void LockFreeQueue::show_queue()
+// {
+// 	uint64_t stamp_osef;
+// 	uint64_t i = 0;
 
-	Node* current = fifo[HEAD].get(stamp_osef);
-	Node* tail = fifo[TAIL].get(stamp_osef);
+// 	Node* current = fifo[HEAD].get(stamp_osef);
+// 	Node* tail = fifo[TAIL].get(stamp_osef);
 	
-	while (current != fifo[TAIL].get(stamp_osef))
-	{
-		std::cout << "Value[" << i++ << "] = " << *current->value << std::endl;
-		//std::cout << "NEXT : " << current->next << std::endl;
-		current = current->next;
+// 	while (current != fifo[TAIL].get(stamp_osef))
+// 	{
+// 		current->value.print(std:cout);
+// 		//std::cout << "Value[" << i++ << "] = " << *current->value.print() << std::endl;
+// 		//std::cout << "NEXT : " << current->next << std::endl;
+// 		current = current->next;
 
-		// print current and tail
-		//std::cout << "CURRENT = " << current << std::endl;
-		//std::cout << "TAIL = " << tail << std::endl;
+// 		// print current and tail
+// 		//std::cout << "CURRENT = " << current << std::endl;
+// 		//std::cout << "TAIL = " << tail << std::endl;
 
-	}
-	std::cout << "TAIL = " << *current->value << std::endl;
-	std::cout << "End of queue" << std::endl;
-}
+// 	}
+// 	//std::cout << "TAIL = " << *current->value << std::endl;
+// 	std::cout << "End of queue" << std::endl;
+// }
 
 Node* LockFreeQueue::__get_free_node()
 {

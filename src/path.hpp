@@ -34,6 +34,9 @@ public:
 		clear();
 	}
 
+	// default constructor
+	Path() : _size(0), _distance(0), _nodes(0), _nodes_bitfield(0), _graph(0) {}
+
 	int max() const { return _graph->size(); }
 	int size() const { return _size; }
 	bool leaf() const { return (_size == max()); }
