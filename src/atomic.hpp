@@ -42,6 +42,16 @@ public:
 		c.pair.stamp = stamp;
 		n.pair.ptr = next;
 		n.pair.stamp = nstamp;
+		
+		// std::cout << "vvvvvvvvvvvvv" << std::endl;
+		// std::cout << "ref.ptr: " << ref.pair.ptr << std::endl;
+		
+		// std::cout << "c.ptr: " << c.pair.ptr << " c.stamp: " << c.pair.stamp << std::endl;
+		
+		// std::cout << "n.ptr: " << n.pair.ptr << " n.stamp: " << n.pair.stamp << std::endl;
+
+		// std::cout << "^^^^^^^^^^^^^" << std::endl;
+		
 		bool res = __atomic_compare_exchange(&ref.val, &c.val, &n.val, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
 		return res;
 	}
