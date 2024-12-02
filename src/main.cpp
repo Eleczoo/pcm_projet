@@ -109,11 +109,6 @@ int main(int argc, char* argv[])
 	for (int i = 0; i < NB_THREADS; i++)
 		workers[i].join();
 
-	// ! CLEANUP
-	delete global.shortest;
-	delete current;
-	delete g_graph;
-
 	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 
 	if (global.verbose & VER_COUNTERS)
@@ -149,6 +144,7 @@ void worker_routine()
 
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
+			std::cout << "exit" << std::endl;
 			break;
 		}
 
@@ -184,9 +180,9 @@ void worker_routine()
 		if (p->size() >= (p->max() - 5))
 		{
 			// Do the job ourselves
-			std::cout << "branch_and_bound" << std::endl;
+			// std::cout << "branch_and_bound" << std::endl;
 			branch_and_bound(p);
-			std::cout << "branch_and_bound done" << std::endl;
+			// std::cout << "branch_and_bound done" << std::endl;
 			// std::cout << "BAB" << std::endl;
 		}
 		else
@@ -238,7 +234,6 @@ static void branch_and_bound(Path* current)
 				{
 					current->add(i);
 					branch_and_bound(current);
-					std::cout << "popping on path : " << current << std::endl;
 					current->pop();
 				}
 			}
