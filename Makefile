@@ -25,4 +25,7 @@ clean:
 	rm -f build/*.o build/main build/atomic
 
 run: all
-	./build/main ./data/dj17.tsp
+	./build/main ./data/dj3.tsp
+	
+runv: all
+	./build/main -v255 ./data/dj3.tsp

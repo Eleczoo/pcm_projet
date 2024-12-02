@@ -28,6 +28,7 @@ public:
 	Path(Graph* graph)
 	{
 		_graph = graph;
+		// TODO: Fixed size nodes (number of cities)
 		_nodes = new int[max() + 1];
 		_nodes_bitfield = 0;
 		_distance = 0;
@@ -58,24 +59,48 @@ public:
 
 	void pop()
 	{
-		if (_size) {
+		if (_size)
+		{
 			int last = _nodes[-- _size];
-			if (_size) {
+			if (_size) 
+			{
 				int node = _nodes[_size - 1];
 				int distance = _graph->distance(node, last);
 				_distance -= distance;
-				_nodes_bitfield &= ~(1 << node);
+				_nodes_bitfield &= ~(1 << last);
 			}
 		}
 	}
 
+	//bool contains(int node) const
+	//{
+	//	//for (int i=0; i<_size; i++)
+	//	//	if (_nodes[i] == node)
+	//	//		return true;
+	//	//return false;
+	//	return (_nodes_bitfield & (1 << node));
+	//}
+
 	bool contains(int node) const
 	{
-		//for (int i=0; i<_size; i++)
-		//	if (_nodes[i] == node)
-		//		return true;
-		//return false;
-		return (_nodes_bitfield & (1 << node));
+		bool ret, ret2;
+
+		// ret = false;
+		// for (int i = 0; i < _size; i++)
+		// 	if (_nodes[i] == node)
+		// 		ret = true;
+
+		ret2 = (_nodes_bitfield & (1 << node));
+		// std::cout << "--------------------------------" << std::endl;
+		// //std::cout << "path : " << this.print() << std::endl;
+		// this->print(std::cout);
+		// std::cout << std::endl;
+		// std::cout << "bitfield  : " << _nodes_bitfield << std::endl;
+		// std::cout << "node : " << node << std::endl;
+		// std::cout << "old contains : " << ret << std::endl;
+		// std::cout << "new contains : " << ret2 << std::endl;
+		// std::cout << "--------------------------------" << std::endl;
+		return ret2;
 	}
 
 	void copy(Path* o)

@@ -5,7 +5,7 @@
 #include "tspfile.hpp"
 #include "fifo.hpp"
 
-#define NB_THREADS 10
+#define NB_THREADS 1
 
 
 enum Verbosity {
@@ -89,7 +89,13 @@ int main(int argc, char* argv[])
 	Path* current = new Path(g_graph);
 	current->add(0);
 	//branch_and_bound(current);
+	// current->add(1);
 
+	// std::cout << "contains 0 : " << current->contains(0) << std::endl;
+	// std::cout << "contains 1 : " << current->contains(1) << std::endl;
+	// std::cout << "contains 2 : " << current->contains(2) << std::endl;
+
+	// return 0 ;
 	// ! Create the FIFO
 	g_fifo = LockFreeQueue();
 	g_fifo.enqueue(current);
@@ -99,7 +105,7 @@ int main(int argc, char* argv[])
 	std::thread workers[NB_THREADS];
 	for (int i = 0; i < NB_THREADS; i++)
 		workers[i] = std::thread(worker_routine);
-	
+
 	for (int i = 0; i < NB_THREADS; i++)
 		workers[i].join();
 
@@ -119,43 +125,69 @@ int main(int argc, char* argv[])
 
 void worker_routine()
 {
-	std::cout << "here" << std::endl;
+	// std::cout << "here" << std::endl;
 	Path* p;
 	Path* new_p;
 	while(1)
 	{
 		// if we processed every possible path, stop the threads
 		int cleared_paths = 0;
+		//std::cout << "global size " << global.size << std::endl;
 		for (int i=0; i<global.size; i++) 
 		{
 			int e = global.fact[i] * global.counter.bound[i];
+
+			//std::cout << " e " << e << std::endl;
 			cleared_paths += e;
 		}
 
-		std::cout << "here2" << std::endl;
-
-
-		if((global.counter.verified + cleared_paths) >= global.total)
-			break;
+		// std::cout << "here2" << std::endl;
 
 		std::cout << "cleared_paths: " << cleared_paths << std::endl;
+		std::cout << "verified : " << global.counter.verified << std::endl;
+		std::cout << "total : " << global.total << std::endl;
+
+		if((global.counter.verified + cleared_paths) >= global.total)
+		{
+			break;
+		}
+
+		// std::cout << "cleared_paths: " << cleared_paths << std::endl;
 
 		// ! 1. Dequeue a job
-		do
-		{
-			p = g_fifo.dequeue();
-		} while (p != nullptr);
+		p = g_fifo.dequeue();
 
-		std::cout << "dequeue" << std::endl;
+		// std::cout << "path : " << p << std::endl;
+
+		if(p == nullptr)
+		{
+			// std::cout << "COULD NOT DEQUEUE" << std::endl;
+			continue;
+		}
+		
+
+		// std::cout << "dequeue" << std::endl;
 
 		// ? Check if the distance is already bigger than the min
-		if (p->distance() > global.shortest->distance()) { continue; }
+		// std::cout << "p : " << p << std::endl;
+		std::cout << "current size : " << p->size() << std::endl;
+		std::cout << "current max : " << p->max() << std::endl;
+		std::cout << "current distance : " << p->distance() << std::endl;
+		std::cout << "shortest distance : " << global.shortest->distance() << std::endl;
+		if (p->distance() > global.shortest->distance()) 
+		{
+			continue; 
+		}
 
+		// std::cout << "distance" << std::endl;
 		// ! 2. Check if we need to split the job
-		if (p->size() == (p->max() - 5))
+		if (p->size() >= (p->max() - 5))
 		{
 			// Do the job ourselves
+			std::cout << "branch_and_bound" << std::endl;
 			branch_and_bound(p);
+			std::cout << "branch_and_bound done" << std::endl;
+			// std::cout << "BAB" << std::endl;
 		}
 		else
 		{
@@ -163,10 +195,12 @@ void worker_routine()
 			for(int x = 0; x < g_graph->size(); x++)
 			{
 				new_p = new Path(g_graph);
-				p->copy(new_p);
+				new_p->copy(p);
 				if (!p->contains(x))
 				{
+					new_p->add(x);
 					g_fifo.enqueue(new_p);
+					std::cout << "enqueing : " << x << std::endl;
 				}
 			}
 		}
@@ -191,18 +225,26 @@ static void branch_and_bound(Path* current)
 				global.counter.found++;
 		}
 		current->pop();
-	} else {
+	} 
+	else 
+	{
 		// not yet a leaf
-		if (current->distance() < global.shortest->distance()) {
+		if (current->distance() < global.shortest->distance()) 
+		{
 			// continue branching
-			for (int i=1; i<current->max(); i++) {
-				if (!current->contains(i)) {
+			for (int i=1; i<current->max(); i++) 
+			{
+				if (!current->contains(i)) 
+				{
 					current->add(i);
 					branch_and_bound(current);
+					std::cout << "popping on path : " << current << std::endl;
 					current->pop();
 				}
 			}
-		} else {
+		} 
+		else 
+		{
 			// current already >= shortest known so far, bound
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
@@ -250,7 +292,46 @@ void print_counters()
 }
 
 
+//int main()
+//{
+//// 	DATA data = 12;
+//// 	DATA data2 = 69;
 
+// 	LockFreeQueue fifo = LockFreeQueue();
+
+//	// std::cout << "-----" << std::endl;
+//	// fifo.show_queue();
+//	// std::cout << "-----" << std::endl;
+
+//	// fifo.enqueue(&data);
+//	// fifo.show_queue();
+//	// std::cout << "-----" << std::endl;
+
+
+//	DATA data[20];
+//	for (int x = 0; x < 20; x++)
+//	{
+//		data[x] = x;
+//		fifo.enqueue(&data[x]);
+//	}
+//	std::cout << "Done queuing" << std::endl;
+
+//	// std::cout << "deq : " << *deq << std::endl;
+
+//	DATA* deq;
+//	for (int x = 0; x < 25; x++)
+//	{
+//		deq = fifo.dequeue();
+//		if (deq)
+//		{
+//			std::cout << "deq : " << *deq << std::endl;
+//		}
+//		else
+//		{
+//			std::cout << "fifo empty" << std::endl;
+//		}
+//	}
+//}
 
 
 

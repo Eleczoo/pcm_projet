@@ -12,6 +12,7 @@
 #define NB_FREE_NODES 256
 
 typedef Path DATA;
+//typedef uint64_t DATA;
 
 class Node
 {
@@ -87,7 +88,7 @@ LockFreeQueue::LockFreeQueue()
 
 LockFreeQueue::~LockFreeQueue()
 {
-	uint64_t stamp_osef;
+	//uint64_t stamp_osef;
 	//delete fifo[HEAD].get(stamp_osef);
 	//delete free_nodes[HEAD].get(stamp_osef);
 }
@@ -135,8 +136,17 @@ DATA* LockFreeQueue::dequeue()
 			{
 				DATA* value = next->value;
 				// Point the head to its next's next node
-				fifo[HEAD].next = fifo[HEAD].next->next;
+				first->next = next->next;
+				
+				// Only sentinel remains
+				if(first->next == nullptr)
+				{
+					// set the tail as the head, like when it first
+					fifo[TAIL].cas(last, first, last_stamp, last_stamp + 1);
+				}
+
 				free_node(next);
+
 				return value;
 				// if (fifo[HEAD].cas(first, next, first_stamp, first_stamp + 1))
 				// {
