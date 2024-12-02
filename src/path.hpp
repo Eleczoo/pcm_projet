@@ -72,35 +72,9 @@ public:
 		}
 	}
 
-	//bool contains(int node) const
-	//{
-	//	//for (int i=0; i<_size; i++)
-	//	//	if (_nodes[i] == node)
-	//	//		return true;
-	//	//return false;
-	//	return (_nodes_bitfield & (1 << node));
-	//}
-
 	bool contains(int node) const
 	{
-		bool ret, ret2;
-
-		// ret = false;
-		// for (int i = 0; i < _size; i++)
-		// 	if (_nodes[i] == node)
-		// 		ret = true;
-
-		ret2 = (_nodes_bitfield & (1 << node));
-		// std::cout << "--------------------------------" << std::endl;
-		// //std::cout << "path : " << this.print() << std::endl;
-		// this->print(std::cout);
-		// std::cout << std::endl;
-		// std::cout << "bitfield  : " << _nodes_bitfield << std::endl;
-		// std::cout << "node : " << node << std::endl;
-		// std::cout << "old contains : " << ret << std::endl;
-		// std::cout << "new contains : " << ret2 << std::endl;
-		// std::cout << "--------------------------------" << std::endl;
-		return ret2;
+		return (_nodes_bitfield & (1 << node));
 	}
 
 	void copy(Path* o)
