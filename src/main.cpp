@@ -211,14 +211,14 @@ static void branch_and_bound(Path* current)
 	if (current->leaf()) {
 		// this is a leaf
 		current->add(0);
-		if (global.verbose & VER_COUNTERS)
-			global.counter.verified++;
+		// if (global.verbose & VER_COUNTERS)
+		global.counter.verified++;
 		if (current->distance() < global.shortest->distance()) {
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			global.shortest->copy(current);
-			if (global.verbose & VER_COUNTERS)
-				global.counter.found++;
+			// if (global.verbose & VER_COUNTERS)
+			global.counter.found++;
 		}
 		current->pop();
 	} 
@@ -243,8 +243,8 @@ static void branch_and_bound(Path* current)
 			// current already >= shortest known so far, bound
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
-			if (global.verbose & VER_COUNTERS)
-				global.counter.bound[current->size()]++;
+			// if (global.verbose & VER_COUNTERS)
+			global.counter.bound[current->size()]++;
 		}
 	}
 }
