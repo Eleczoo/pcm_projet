@@ -4,9 +4,13 @@
 #include "path.hpp"
 #include "tspfile.hpp"
 #include "fifo.hpp"
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#define NB_THREADS 1
 
+#define NB_THREADS 4
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -50,8 +54,26 @@ static void branch_and_bound(Path* current);
 void reset_counters(int size);
 void print_counters();
 
+void segfault_sigaction(int signal, siginfo_t *si, void *arg)
+{
+    printf("Caught segfault at address %p\n", si->si_addr);
+    exit(0);
+}
+
+
 int main(int argc, char* argv[])
 {
+
+	struct sigaction sa;
+
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = segfault_sigaction;
+    sa.sa_flags   = SA_SIGINFO;
+
+    sigaction(SIGSEGV, &sa, NULL);
+
+
 	char* fname = 0;
 	if (argc == 2) 
 	{
@@ -120,10 +142,12 @@ int main(int argc, char* argv[])
 
 void worker_routine()
 {
-	// std::cout << "here" << std::endl;
+	std::cout << "STARTED WORKER" << std::endl;
 	Path* p;
 	Path* new_p;
-	while(1)
+	//uint64_t count = 0;
+	// return;
+	while (1)
 	{
 		// if we processed every possible path, stop the threads
 		int cleared_paths = 0;
@@ -138,9 +162,9 @@ void worker_routine()
 
 		// std::cout << "here2" << std::endl;
 
-		std::cout << "cleared_paths: " << cleared_paths << std::endl;
-		std::cout << "verified : " << global.counter.verified << std::endl;
-		std::cout << "total : " << global.total << std::endl;
+		//std::cout << "cleared_paths: " << cleared_paths << std::endl;
+		//std::cout << "verified : " << global.counter.verified << std::endl;
+		//std::cout << "total : " << global.total << std::endl;
 
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
@@ -166,10 +190,10 @@ void worker_routine()
 
 		// ? Check if the distance is already bigger than the min
 		// std::cout << "p : " << p << std::endl;
-		std::cout << "current size : " << p->size() << std::endl;
-		std::cout << "current max : " << p->max() << std::endl;
-		std::cout << "current distance : " << p->distance() << std::endl;
-		std::cout << "shortest distance : " << global.shortest->distance() << std::endl;
+		// std::cout << "current size : " << p->size() << std::endl;
+		// std::cout << "current max : " << p->max() << std::endl;
+		// std::cout << "current distance : " << p->distance() << std::endl;
+		// std::cout << "shortest distance : " << global.shortest->distance() << std::endl;
 		if (p->distance() > global.shortest->distance()) 
 		{
 			continue; 
@@ -177,16 +201,24 @@ void worker_routine()
 
 		// std::cout << "distance" << std::endl;
 		// ! 2. Check if we need to split the job
-		if (p->size() >= (p->max() - 5))
+		// if (p->size() >= (p->max() - 8))
+		// std::cout << "p.size = " << p->size() << std::endl;
+
+		if (p->size() >= (p->max() * 3 / 4))
 		{
 			// Do the job ourselves
-			// std::cout << "branch_and_bound" << std::endl;
+			//if((count++ % 100) == 0) 
+			//	std::cout << "branch_and_bound | " << count << std::endl;
+
 			branch_and_bound(p);
 			// std::cout << "branch_and_bound done" << std::endl;
 			// std::cout << "BAB" << std::endl;
 		}
 		else
-		{
+		{ 
+			// if((count++ % 10) == 0) 
+			// 	std::cout << "split the job | " << count << std::endl;
+		
 			// Split the job
 			for(int x = 0; x < g_graph->size(); x++)
 			{
@@ -196,7 +228,7 @@ void worker_routine()
 				{
 					new_p->add(x);
 					g_fifo.enqueue(new_p);
-					std::cout << "enqueing : " << x << std::endl;
+					//std::cout << "enqueing : " << x << std::endl;
 				}
 			}
 		}
