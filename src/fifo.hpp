@@ -12,27 +12,33 @@
 #define NB_FREE_NODES 256
 
 typedef Path DATA;
-//typedef uint64_t DATA;
 
 class Node
 {
 public:
 	DATA* value;
-	Node* next;
+	atomic_stamped<Node> next;
 
-	Node() {
+	Node() 
+	{
 		value = nullptr;
-		next = nullptr;
+		next = atomic_stamped<Node>();
 	}
 
-	Node(Node* next) {
-		value = nullptr;
-		this->next = next;
+	Node(DATA* value) 
+	{
+		value = value;
+		next = atomic_stamped<Node>();
 	}
 
-	Node(DATA* value, Node* next) {
-		this->value = value;
-		this->next = next;
+	Node(atomic_stamped<Node> next) {
+		value = nullptr;
+		next = next;
+	}
+
+	Node(DATA* value, atomic_stamped<Node> next) {
+		value = value;
+		next = next;
 	}
 };
 
@@ -48,17 +54,14 @@ public:
 
 
 private:
-
-	DATA val_head;
-
-	Node sentinel = Node(&val_head, nullptr);
+	Node sentinel = Node();
 
 	// ! Free nodes list head and tail with stamped pointers
 	// Create a pool of free nodes
 
 	atomic_stamped<Node> fifo[2];
+	atomic_stamped<Node> free_nodes[2];
 	Node fnodes[NB_FREE_NODES]; // Actually free nodes
-	atomic_stamped<Node> free_nodes[NB_FREE_NODES];
 
 	// ! Prototypes
 	Node* __get_free_node();
@@ -73,17 +76,14 @@ LockFreeQueue::LockFreeQueue()
 
 	for (int i = 0; i < NB_FREE_NODES-1; i++)
 	{
-		fnodes[i].next = &fnodes[i+1];
-		free_nodes[i].set(&fnodes[i], 0);
+		fnodes[i].next.set(&fnodes[i+1], 0);
 	}
-	free_nodes[NB_FREE_NODES-1].set(&fnodes[NB_FREE_NODES-1], 0);
 
 	fifo[0].set(&sentinel, 0); 
 	fifo[1].set(&sentinel, 0);
 
 	free_nodes[0].set(&fnodes[0], 0);
-	// free_nodes[0].set(&free1, 0); 
-	// free_nodes[1].set(&free2, 1);
+	free_nodes[1].set(&fnodes[NB_FREE_NODES-1], 0);
 }
 
 LockFreeQueue::~LockFreeQueue()
@@ -96,6 +96,7 @@ LockFreeQueue::~LockFreeQueue()
 
 bool LockFreeQueue::enqueue(DATA* value)
 {
+	std::cout << "ENQUEUE" << std::endl;
 
 	//std::cout << "Enqueuing: " << *value << std::endl;
 	Node* node = __get_free_node();
@@ -104,25 +105,28 @@ bool LockFreeQueue::enqueue(DATA* value)
 	node->value = value;
 	//std::cout << "Node value: " << *node->value << std::endl;
 	__enqueue_node(fifo, node);
+	std::cout << "END ENQUEUE" << std::endl;
+
 	return true;
 }
 
 DATA* LockFreeQueue::dequeue()
 {
+	std::cout << "DEQUEUE" << std::endl;
+
 	Node* first;
 	Node* last;
 	Node* next;
-	uint64_t first_stamp, last_stamp;
+	uint64_t first_stamp, last_stamp, next_stamp;
 
 	while (true)
 	{
 		first = fifo[HEAD].get(first_stamp);
 		last = fifo[TAIL].get(last_stamp);
-		next = first->next;
+		next = first->next.get(next_stamp);
 
 		if (first == fifo[HEAD].get(first_stamp))
 		{
-
 			// ! If the queue is empty
 			if (first == last)
 			{
@@ -131,31 +135,37 @@ DATA* LockFreeQueue::dequeue()
 
 				// ! Finish the operation for the other thread
 				fifo[TAIL].cas(last, next, last_stamp, last_stamp + 1);
-			} 
+			}
 			else
 			{
 				DATA* value = next->value;
-				// Point the head to its next's next node
-				first->next = next->next;
 				
-				// Only sentinel remains
-				if(first->next == nullptr)
+				// Point the head to its next's next node
+				bool ret;
+				ret = first->next.cas(next, next->next.get(next_stamp), next_stamp, next_stamp + 1);
+				if(!ret)
 				{
-					// set the tail as the head, like when it first
-					fifo[TAIL].cas(last, first, last_stamp, last_stamp + 1);
+					std::cout << "CAS" << std::endl;
+					continue;
+				}
+
+				// Only sentinel remains
+				if(first->next.get(first_stamp) == nullptr)
+				{
+					// set the tail like the head, pointing to the sentinel
+					do
+					{
+						ret = fifo[TAIL].cas(last, first, last_stamp, last_stamp + 1);
+					} while (ret == false);
 				}
 
 				free_node(next);
-
 				return value;
-				// if (fifo[HEAD].cas(first, next, first_stamp, first_stamp + 1))
-				// {
-					// free_node(first);
-					// return value;
-				// }
 			}
 		}
 	}
+	std::cout << "END DEQUEUE" << std::endl;
+
 }
 
 // void LockFreeQueue::show_queue()
@@ -184,6 +194,8 @@ DATA* LockFreeQueue::dequeue()
 
 Node* LockFreeQueue::__get_free_node()
 {
+	std::cout << "GET FREE NODE" << std::endl;
+
 	Node* first;
 	Node* last;
 	Node* next;
@@ -193,15 +205,17 @@ Node* LockFreeQueue::__get_free_node()
 	{
 		first = free_nodes[HEAD].get(first_stamp);
 		last = free_nodes[TAIL].get(last_stamp);
-		next = first->next;
+		next = first->next.get(last_stamp);
 
 		if (first == free_nodes[HEAD].get(first_stamp))
 		{
 			if (first == last)
 			{
+				// TODO: remove the malloc ?
 				if (!next) return new Node();
 				free_nodes[TAIL].cas(last, next, last_stamp, last_stamp + 1);
-			} else
+			}
+			else
 			{
 				if (free_nodes[HEAD].cas(first, next, first_stamp, first_stamp + 1))
 					return first;
@@ -221,26 +235,26 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 	Node* next;
 	uint64_t last_stamp;
 
-	// atomic_stamped<Node*> pnext;
-
-
-	node->next = nullptr;
+	// ? Set the new Node's next to nullptr, because it's the new tail
+	node->next.set(nullptr, 0);
 
 	while (true)
 	{
 		last = queue[TAIL].get(last_stamp);
-		next = last->next;
+		next = last->next.get(last_stamp);
 
 		if (last == queue[TAIL].get(last_stamp))
 		{
 			// If its the last, no operation is in progress
 			if (next == nullptr)
 			{
-				// std::cout << "here" << std::endl;
-				if (queue[TAIL].cas(last, node, last_stamp, last_stamp + 1)) 
+				// ? Set the current tail's next to our new node
+				bool ret;
+				ret = last->next.cas(next, node, last_stamp, last_stamp + 1);
+				if(ret)
 				{
-					last->next = node;
-					break;
+					queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
+					return;
 				}
 			}
 			else
@@ -250,45 +264,7 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			}
 		}
 	}
-	//queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
-
 }
-
-
-
-// void enq_node(CONVERSION *queue, NODE *node)
-// {
-// 	CONVERSION last, next, new_node;
-// 	node->next.link.ref += 1;
-// 	node->next.link.addr = NULL;
-// 	while (true) 
-// 	{
-// 		last.val = queue[TAIL].val;
-// 		next.val = last.link.addr->next.val;
-// 		if (last.val == queue[TAIL].val)
-// 		{
-// 			if (next.link.addr == NULL) 
-// 			{
-// 				new_node.link.addr = node;
-// 				new_node.link.ref = next.link.ref + 1;
-// 				if (CAS64(&last.link.addr->next.val, next.val, new_node.val))
-// 					break;
-// 			}
-// 			else 
-// 			{
-// 				next.link.ref = last.link.ref + 1;
-// 				CAS64(&queue[TAIL].val, last.val, next.val);
-// 			}
-// 		}
-// 	}
-
-// 	new_node.link.addr = node;
-// 	new_node.link.ref = last.link.ref + 1;
-// 	CAS64(&queue[TAIL].val, last.val, new_node.val);
-// }
-
-
-
 
 
 #endif // __FIFO_HPP__
