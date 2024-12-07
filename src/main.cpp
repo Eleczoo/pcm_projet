@@ -174,6 +174,8 @@ void worker_routine(int id)
 	// return;
 	while (1)
 	{
+		g_mutex.lock();
+
 		// if we processed every possible path, stop the threads
 		int cleared_paths = 0;
 		//std::cout << id  <<" - " << "global size " << global.size << std::endl;
@@ -196,6 +198,8 @@ void worker_routine(int id)
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
 			std::cout << id  <<" - " << "exit" << std::endl;
+			g_mutex.unlock();
+
 			break;
 		}
 
@@ -217,9 +221,10 @@ void worker_routine(int id)
 				std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
 				std::cout << id  <<" - " << "total : " << global.total << std::endl;
 				std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-
+				g_mutex.unlock();
 				break;
 			}
+			g_mutex.unlock();
 			continue;
 		}
 		
@@ -234,10 +239,9 @@ void worker_routine(int id)
 		// std::cout << id  <<" - " << "shortest distance : " << global.shortest->distance() << std::endl;
 		if (p->distance() > global.shortest->distance()) 
 		{
-			g_mutex.lock();
 			global.counter.bound[p->size()]++;
-			g_mutex.unlock();
 			// set(&global.counter.bound[p->size()], global.counter.bound[p->size()], global.counter.bound[p->size()] + 1);
+			g_mutex.unlock();
 			continue; 
 		}
 
@@ -251,9 +255,9 @@ void worker_routine(int id)
 			// Do the job ourselves
 			//if((count++ % 100) == 0) 
 			//	std::cout << id  <<" - " << "branch_and_bound | " << count << std::endl;
-			g_mutex.lock();
+			//g_mutex.lock();
 			branch_and_bound(p);
-			g_mutex.unlock();
+			//g_mutex.unlock();
 			// std::cout << id  <<" - " << "branch_and_bound done" << std::endl;
 			// std::cout << id  <<" - " << "BAB" << std::endl;
 		}
@@ -275,6 +279,9 @@ void worker_routine(int id)
 				}
 			}
 		}
+
+
+		g_mutex.unlock();
 	}
 }
 
