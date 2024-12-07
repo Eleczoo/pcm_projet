@@ -1,6 +1,8 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
-CFLAGS=-O3 -Wall
-LDFLAGS=-O3 -lm
+#CFLAGS=-O3 -Wall
+CFLAGS= -O2 -Wall
+#LDFLAGS=-O3 -lm
+LDFLAGS= -O2 -lm
 
 #all: main fifo atomic 
 all: main
@@ -25,7 +27,7 @@ clean:
 	rm -f build/*.o build/main build/atomic
 
 run: all
-	./build/main ./data/dj.tsp
+	./build/main ./data/dj8.tsp
 	
 runv: all
-	./build/main -v255 ./data/dj.tsp
+	./build/main -v255 ./data/dj8.tsp

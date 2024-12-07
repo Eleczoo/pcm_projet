@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <mutex>
 
 
 #define NB_THREADS 4
@@ -20,6 +21,8 @@ enum Verbosity {
 	VER_ANALYSE = 8,
 	VER_COUNTERS = 16,
 };
+
+std::mutex g_mutex;
 
 static struct {
 	Path* shortest;
@@ -49,20 +52,22 @@ LockFreeQueue g_fifo;
 Graph* g_graph;
 
 // ! PROTOTYPES
-void worker_routine();
+void worker_routine(int id);
 static void branch_and_bound(Path* current);
 void reset_counters(int size);
 void print_counters();
 
 void segfault_sigaction(int signal, siginfo_t *si, void *arg)
 {
-    printf("Caught segfault at address %p\n", si->si_addr);
+	// Print colored error message
+    std::cout << COLOR.RED << "Caught segfault at address " << si->si_addr << COLOR.ORIGINAL << std::endl;
     exit(0);
 }
 
 
 int main(int argc, char* argv[])
 {
+	//freopen("output.txt","w",stdout);
 
 	struct sigaction sa;
 
@@ -110,7 +115,7 @@ int main(int argc, char* argv[])
 
 	Path* current = new Path(g_graph);
 	current->add(0);
-	//branch_and_bound(current);
+	// branch_and_bound(current);
 	// current->add(1);
 
 	// std::cout << "contains 0 : " << current->contains(0) << std::endl;
@@ -120,13 +125,24 @@ int main(int argc, char* argv[])
 	// return 0 ;
 	// ! Create the FIFO
 	g_fifo = LockFreeQueue();
+	// Path* new_p;
+	// for(int x = 0; x < g_graph->size(); x++)
+	// {
+	// 	new_p = new Path(g_graph);
+	// 	new_p->copy(current);
+	// 	if (!current->contains(x))
+	// 	{
+	// 		new_p->add(x);
+	// 		g_fifo.enqueue(new_p);
+	// 	}
+	// }
 	g_fifo.enqueue(current);
 
 	// ! WORKERS
 	std::cout << "Starting " << NB_THREADS << " threads\n";
 	std::thread workers[NB_THREADS];
 	for (int i = 0; i < NB_THREADS; i++)
-		workers[i] = std::thread(worker_routine);
+		workers[i] = std::thread(worker_routine, i);
 
 	for (int i = 0; i < NB_THREADS; i++)
 		workers[i].join();
@@ -140,84 +156,111 @@ int main(int argc, char* argv[])
 }
 
 
-void worker_routine()
+void set(int* addr, int curr, int next)
 {
-	std::cout << "STARTED WORKER" << std::endl;
+	while (!__atomic_compare_exchange(addr, &curr, &next, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+}
+
+
+
+void worker_routine(int id)
+{
+	// Print timestamp in hh:mm:ss::ms
+	std::cout << id  <<" - " << "STARTED WORKER " << id << std::endl;
 	Path* p;
 	Path* new_p;
+	int temp = 0; // Remove this
 	//uint64_t count = 0;
 	// return;
 	while (1)
 	{
 		// if we processed every possible path, stop the threads
 		int cleared_paths = 0;
-		//std::cout << "global size " << global.size << std::endl;
+		//std::cout << id  <<" - " << "global size " << global.size << std::endl;
 		for (int i=0; i<global.size; i++) 
 		{
 			int e = global.fact[i] * global.counter.bound[i];
 
-			//std::cout << " e " << e << std::endl;
+			// std::cout << id  <<" - " << " e " << e << std::endl;
 			cleared_paths += e;
 		}
 
-		// std::cout << "here2" << std::endl;
+		// std::cout << id  <<" - " << "here2" << std::endl;
 
-		//std::cout << "cleared_paths: " << cleared_paths << std::endl;
-		//std::cout << "verified : " << global.counter.verified << std::endl;
-		//std::cout << "total : " << global.total << std::endl;
+		// std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
+		// std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
+		// std::cout << id  <<" - " << "total : " << global.total << std::endl;
+		// std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
 
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
-			std::cout << "exit" << std::endl;
+			std::cout << id  <<" - " << "exit" << std::endl;
 			break;
 		}
 
-		// std::cout << "cleared_paths: " << cleared_paths << std::endl;
+		// std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
 
 		// ! 1. Dequeue a job
 		p = g_fifo.dequeue();
 
-		// std::cout << "path : " << p << std::endl;
+		// std::cout << id  <<" - " << "path : " << p << std::endl;
 
 		if(p == nullptr)
 		{
-			// std::cout << "COULD NOT DEQUEUE" << std::endl;
+			//std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
+			//temp++;
+			if (temp > 10)
+			{
+				std::cout << id  << "EXITING BECAUSE I COULD NOT GET QUEUE" << std::endl;
+				std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
+				std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
+				std::cout << id  <<" - " << "total : " << global.total << std::endl;
+				std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
+				break;
+			}
 			continue;
 		}
 		
 
-		// std::cout << "dequeue" << std::endl;
+		// std::cout << id  <<" - " << "dequeue" << std::endl;
 
 		// ? Check if the distance is already bigger than the min
-		// std::cout << "p : " << p << std::endl;
-		// std::cout << "current size : " << p->size() << std::endl;
-		// std::cout << "current max : " << p->max() << std::endl;
-		// std::cout << "current distance : " << p->distance() << std::endl;
-		// std::cout << "shortest distance : " << global.shortest->distance() << std::endl;
+		// std::cout << id  <<" - " << "p : " << p << std::endl;
+		// std::cout << id  <<" - " << "current size : " << p->size() << std::endl;
+		// std::cout << id  <<" - " << "current max : " << p->max() << std::endl;
+		// std::cout << id  <<" - " << "current distance : " << p->distance() << std::endl;
+		// std::cout << id  <<" - " << "shortest distance : " << global.shortest->distance() << std::endl;
 		if (p->distance() > global.shortest->distance()) 
 		{
+			g_mutex.lock();
+			global.counter.bound[p->size()]++;
+			g_mutex.unlock();
+			// set(&global.counter.bound[p->size()], global.counter.bound[p->size()], global.counter.bound[p->size()] + 1);
 			continue; 
 		}
 
-		// std::cout << "distance" << std::endl;
+		// std::cout << id  <<" - " << "distance" << std::endl;
 		// ! 2. Check if we need to split the job
 		// if (p->size() >= (p->max() - 8))
-		// std::cout << "p.size = " << p->size() << std::endl;
+		// std::cout << id  <<" - " << "p.size = " << p->size() << std::endl;
 
-		if (p->size() >= (p->max() * 3 / 4))
+		if (p->size() >= ((p->max() * 3) / 4))
 		{
 			// Do the job ourselves
 			//if((count++ % 100) == 0) 
-			//	std::cout << "branch_and_bound | " << count << std::endl;
-
+			//	std::cout << id  <<" - " << "branch_and_bound | " << count << std::endl;
+			g_mutex.lock();
 			branch_and_bound(p);
-			// std::cout << "branch_and_bound done" << std::endl;
-			// std::cout << "BAB" << std::endl;
+			g_mutex.unlock();
+			// std::cout << id  <<" - " << "branch_and_bound done" << std::endl;
+			// std::cout << id  <<" - " << "BAB" << std::endl;
 		}
 		else
 		{ 
 			// if((count++ % 10) == 0) 
-			// 	std::cout << "split the job | " << count << std::endl;
+			// 	std::cout << id  <<" - " << "split the job | " << count << std::endl;
 		
 			// Split the job
 			for(int x = 0; x < g_graph->size(); x++)
@@ -228,7 +271,7 @@ void worker_routine()
 				{
 					new_p->add(x);
 					g_fifo.enqueue(new_p);
-					//std::cout << "enqueing : " << x << std::endl;
+					//std::cout << id  <<" - " << "enqueing : " << x << std::endl;
 				}
 			}
 		}
@@ -240,20 +283,32 @@ static void branch_and_bound(Path* current)
 	if (global.verbose & VER_ANALYSE)
 		std::cout << "analysing " << current << '\n';
 
-	if (current->leaf()) {
+	if (current->leaf()) 
+	{
 		// this is a leaf
 		current->add(0);
 		// if (global.verbose & VER_COUNTERS)
+		// g_mutex.lock();
 		global.counter.verified++;
-		if (current->distance() < global.shortest->distance()) {
+		// g_mutex.unlock();
+		// set(&global.counter.verified, global.counter.verified, global.counter.verified + 1);
+
+		// g_mutex.lock();
+		if (current->distance() < global.shortest->distance()) 
+		{
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
+			
+			//g_mutex.lock();
 			global.shortest->copy(current);
-			// if (global.verbose & VER_COUNTERS)
 			global.counter.found++;
+			//g_mutex.unlock();
+			// if (global.verbose & VER_COUNTERS)
+			// set(&global.counter.found, global.counter.found, global.counter.found + 1);
 		}
+		// g_mutex.unlock();
 		current->pop();
-	} 
+	}
 	else 
 	{
 		// not yet a leaf
@@ -276,8 +331,13 @@ static void branch_and_bound(Path* current)
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
 			// if (global.verbose & VER_COUNTERS)
+
+			// g_mutex.lock();
 			global.counter.bound[current->size()]++;
+			// g_mutex.unlock();
+			//set(&global.counter.bound[current->size()], global.counter.bound[current->size()], global.counter.bound[current->size()] + 1);
 		}
+
 	}
 }
 
@@ -301,10 +361,10 @@ void reset_counters(int size)
 
 void print_counters()
 {
-	std::cout << "total: " << global.total << '\n';
-	std::cout << "verified: " << global.counter.verified << '\n';
-	std::cout << "found shorter: " << global.counter.found << '\n';
-	std::cout << "bound (per level):";
+//	std::cout << "total: " << global.total << '\n';
+//	std::cout << "verified: " << global.counter.verified << '\n';
+//	std::cout << "found shorter: " << global.counter.found << '\n';
+//	std::cout << "bound (per level):";
 	for (int i=0; i<global.size; i++)
 		std::cout << ' ' << global.counter.bound[i];
 	std::cout << "\nbound equivalent (per level): ";

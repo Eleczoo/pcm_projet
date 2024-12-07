@@ -79,7 +79,8 @@ public:
 
 	void copy(Path* o)
 	{
-		if (max() != o->max()) {
+		if (max() != o->max()) 
+		{
 			delete[] _nodes;
 			_nodes = new int[o->max() + 1];
 		}

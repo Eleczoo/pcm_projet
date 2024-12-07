@@ -268,11 +268,12 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 					return;
 				}
 			}
-			else
+			else // The previous action has not been completed
 			{
-				// Finish the operation for the other thread
-				std::cout << "--- ENQUEUE HELP" << std::endl;
-				queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+					// Finish the operation for the other thread
+					//std::cout << "--- ENQUEUE ELSE" << std::endl;
+					//std::cout << ".";
+					queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 		}
 	}
