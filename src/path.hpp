@@ -46,15 +46,18 @@ public:
 
 	void add(int node)
 	{
+		// std::cout << "path.add() size before : " << _size << std::endl;
 		if (_size <= max()) {
-			if (_size) {
+			if (_size) 
+			{
 				int last = _nodes[_size - 1];
 				int distance = _graph->distance(last, node);
 				_distance += distance;
 			}
-			_nodes[_size ++] = node;
+			_nodes[_size++] = node;
 			_nodes_bitfield |= 1 << node;
 		}
+		// std::cout << "path.add() _size after : " << _size << std::endl;
 	}
 
 	void pop()
@@ -85,7 +88,9 @@ public:
 			_nodes = new int[o->max() + 1];
 		}
 		_graph = o->_graph;
+		// std::cout << "path.copy() copied size from graph" << o->_size << std::endl;
 		_size = o->_size;
+		// std::cout << "path.copy() actually " << _size << std::endl;
 		_distance = o->_distance;
 		_nodes_bitfield = o->_nodes_bitfield;
 		for (int i=0; i<_size; i++)

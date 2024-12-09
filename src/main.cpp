@@ -11,7 +11,7 @@
 #include <mutex>
 
 
-#define NB_THREADS 4
+#define NB_THREADS 16
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
 
 	// return 0 ;
 	// ! Create the FIFO
-	g_fifo = LockFreeQueue();
+	//g_fifo = LockFreeQueue();
 	// Path* new_p;
 	// for(int x = 0; x < g_graph->size(); x++)
 	// {
@@ -137,6 +137,16 @@ int main(int argc, char* argv[])
 	// 	}
 	// }
 	g_fifo.enqueue(current);
+
+	// Path* p;
+	// p = g_fifo.dequeue();
+	// std::cout << "main" <<" - " << "p : " << p << std::endl;
+	// std::cout << "main" <<" - " << "current size : " << p->size() << std::endl;
+	// std::cout << "main" <<" - " << "current max : " << p->max() << std::endl;
+	// std::cout << "main" <<" - " << "current distance : " << p->distance() << std::endl;
+	// std::cout << "main" <<" - " << "shortest distance : " << global.shortest->distance() << std::endl;
+
+
 
 	// ! WORKERS
 	std::cout << "Starting " << NB_THREADS << " threads\n";
@@ -170,11 +180,16 @@ void worker_routine(int id)
 	Path* p;
 	Path* new_p;
 	int temp = 0; // Remove this
-	//uint64_t count = 0;
+	//uint64_t count = 0; 
 	// return;
+	g_mutex.lock();
+
+	//std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
+	std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
+	std::cout << id  <<" - " << "total : " << global.total << std::endl;
+	std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 	while (1)
 	{
-		g_mutex.lock();
 
 		// if we processed every possible path, stop the threads
 		int cleared_paths = 0;
@@ -198,7 +213,7 @@ void worker_routine(int id)
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
 			std::cout << id  <<" - " << "exit" << std::endl;
-			g_mutex.unlock();
+			// g_mutex.unlock();
 
 			break;
 		}
@@ -212,7 +227,7 @@ void worker_routine(int id)
 
 		if(p == nullptr)
 		{
-			//std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
+			// std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
 			//temp++;
 			if (temp > 10)
 			{
@@ -221,15 +236,15 @@ void worker_routine(int id)
 				std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
 				std::cout << id  <<" - " << "total : " << global.total << std::endl;
 				std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-				g_mutex.unlock();
+				// g_mutex.unlock();
 				break;
 			}
-			g_mutex.unlock();
 			continue;
+		// g_mutex.unlock();
 		}
 		
 
-		// std::cout << id  <<" - " << "dequeue" << std::endl;
+		// std::cout << id  <<" - " << "dequeue success" << std::endl;
 
 		// ? Check if the distance is already bigger than the min
 		// std::cout << id  <<" - " << "p : " << p << std::endl;
@@ -241,11 +256,12 @@ void worker_routine(int id)
 		{
 			global.counter.bound[p->size()]++;
 			// set(&global.counter.bound[p->size()], global.counter.bound[p->size()], global.counter.bound[p->size()] + 1);
-			g_mutex.unlock();
+			// g_mutex.unlock();
 			continue; 
 		}
 
 		// std::cout << id  <<" - " << "distance" << std::endl;
+
 		// ! 2. Check if we need to split the job
 		// if (p->size() >= (p->max() - 8))
 		// std::cout << id  <<" - " << "p.size = " << p->size() << std::endl;
@@ -254,7 +270,7 @@ void worker_routine(int id)
 		{
 			// Do the job ourselves
 			//if((count++ % 100) == 0) 
-			//	std::cout << id  <<" - " << "branch_and_bound | " << count << std::endl;
+			// std::cout << id  <<" - " << "branch_and_bound" << std::endl;
 			//g_mutex.lock();
 			branch_and_bound(p);
 			//g_mutex.unlock();
@@ -264,7 +280,7 @@ void worker_routine(int id)
 		else
 		{ 
 			// if((count++ % 10) == 0) 
-			// 	std::cout << id  <<" - " << "split the job | " << count << std::endl;
+				// std::cout << id  <<" - " << "split the job" << std::endl;
 		
 			// Split the job
 			for(int x = 0; x < g_graph->size(); x++)
@@ -275,14 +291,12 @@ void worker_routine(int id)
 				{
 					new_p->add(x);
 					g_fifo.enqueue(new_p);
-					//std::cout << id  <<" - " << "enqueing : " << x << std::endl;
+					// std::cout << id  <<" - " << "enqueing : " << x << std::endl;
 				}
 			}
 		}
-
-
-		g_mutex.unlock();
 	}
+	g_mutex.unlock();
 }
 
 static void branch_and_bound(Path* current)

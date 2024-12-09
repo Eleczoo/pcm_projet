@@ -20,7 +20,8 @@ private:
 	int *_y;
 
 public:
-	Graph(int size) {
+	Graph(int size) 
+	{
 		_max_size = size;
 		_distances = new int[size * size];
 		for (int i=0; i<size; i++)
