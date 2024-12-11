@@ -64,6 +64,8 @@ private:
 	atomic_stamped<Node> free_nodes[2];
 	Node fnodes[NB_FREE_NODES]; // Actually free nodes
 
+	int64_t size; 
+
 	// ! Prototypes
 	Node* __get_free_node();
 	void free_node(Node* node);
@@ -74,6 +76,8 @@ LockFreeQueue::LockFreeQueue()
 {
 	// ! FIFO is actually the head and the tail
 	// ! OF THE FIFO
+
+	size = 0;
 
 	for (int i = 0; i < NB_FREE_NODES-1; i++)
 	{
@@ -117,6 +121,9 @@ bool LockFreeQueue::enqueue(DATA* value)
 	#ifdef DEBUG
 		std::cout << "--- END ENQUEUE" << std::endl;
 	#endif
+
+	this->size++;
+	// std::cout << "Size  - " << this->size << std::endl;
 
 	return true;
 }
@@ -184,7 +191,7 @@ DATA* LockFreeQueue::dequeue()
 				}
 
 				// Only sentinel remains
-				if(first->next.get(first_stamp) == nullptr)
+				if(first->next.get(next_stamp) == nullptr)
 				{
 					// set the tail like the head, pointing to the sentinel
 					do
@@ -197,6 +204,9 @@ DATA* LockFreeQueue::dequeue()
 				#ifdef DEBUG
 				std::cout << "--- END DEQUEUE" << std::endl;
 				#endif
+
+				this->size--;
+				// std::cout << "Size  - " << this->size << std::endl;
 				return value;
 			}
 		}
@@ -264,13 +274,13 @@ Node* LockFreeQueue::__get_free_node()
 	Node* first;
 	Node* last;
 	Node* next;
-	uint64_t first_stamp, last_stamp;
+	uint64_t first_stamp, last_stamp, next_stamp;
 
 	while (true)
 	{
 		first = free_nodes[HEAD].get(first_stamp);
 		last = free_nodes[TAIL].get(last_stamp);
-		next = first->next.get(last_stamp);
+		next = first->next.get(next_stamp);
 
 		if (first == free_nodes[HEAD].get(first_stamp))
 		{

@@ -9,10 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mutex>
-#include "death_handler.h"
+//#include "death_handler.h"
 
 
-#define NB_THREADS 3
+#define NB_THREADS 6
+#define LIMIT_MAX_PATH 10
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -25,17 +26,17 @@ enum Verbosity {
 
 std::mutex g_mutex;
 
-static struct {
+volatile static struct {
 	Path* shortest;
 	Verbosity verbose;
 	struct {
-		int verified;	// # of paths checked
-		int found;	// # of times a shorter path was found
-		int* bound;	// # of bound operations per level
+		uint64_t verified;	// # of paths checked
+		uint64_t found;	// # of times a shorter path was found
+		uint64_t* bound;	// # of bound operations per level
 	} counter;
-	int size;
-	int total;		// number of paths to check
-	int* fact;
+	uint64_t size;
+	uint64_t total;		// number of paths to check
+	uint64_t* fact;
 } global;
 
 
@@ -72,16 +73,20 @@ int main(int argc, char* argv[])
 {
 	//freopen("output.txt","w",stdout);
 
-	//struct sigaction sa;
+	// std::cout << "SIZE OF PATH " << sizeof(Path) << std::endl;
 
-    //memset(&sa, 0, sizeof(struct sigaction));
-    //sigemptyset(&sa.sa_mask);
-    //sa.sa_sigaction = segfault_sigaction;
-    //sa.sa_flags   = SA_SIGINFO;
+	// exit(0);
 
-    //sigaction(SIGSEGV, &sa, NULL);
+	struct sigaction sa;
 
-	Debug::DeathHandler dh;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = segfault_sigaction;
+    sa.sa_flags   = SA_SIGINFO;
+
+    sigaction(SIGSEGV, &sa, NULL);
+
+	//Debug::DeathHandler dh;
 
 	char* fname = 0;
 	if (argc == 2) 
@@ -170,7 +175,7 @@ int main(int argc, char* argv[])
 }
 
 
-void set(int* addr, int curr, int next)
+void set(volatile uint64_t* addr, uint64_t curr, uint64_t next)
 {
 	while (!__atomic_compare_exchange(addr, &curr, &next, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 }
@@ -192,19 +197,22 @@ void worker_routine(int id)
 	std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
 	std::cout << id  <<" - " << "total : " << global.total << std::endl;
 	std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+
 	while (1)
 	{
 
 		// if we processed every possible path, stop the threads
-		int cleared_paths = 0;
+		uint64_t cleared_paths = 0;
 		//std::cout << id  <<" - " << "global size " << global.size << std::endl;
-		for (int i=0; i<global.size; i++) 
+		// g_mutex.lock();
+		for (uint64_t i=0; i<global.size; i++) 
 		{
-			int e = global.fact[i] * global.counter.bound[i];
+			uint64_t e = global.fact[i] * global.counter.bound[i];
 
 			// std::cout << id  <<" - " << " e " << e << std::endl;
 			cleared_paths += e;
 		}
+		// g_mutex.unlock();
 
 		// std::cout << id  <<" - " << "here2" << std::endl;
 
@@ -219,6 +227,10 @@ void worker_routine(int id)
 			std::cout << id  <<" - " << "exit" << std::endl;
 			// g_mutex.unlock();
 
+			std::cout << id  << "EXITING NORMALY" << std::endl;
+			std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
+			std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
+			std::cout << id  <<" - " << "total : " << global.total << std::endl;
 			break;
 		}
 
@@ -232,14 +244,14 @@ void worker_routine(int id)
 		if(p == nullptr)
 		{
 			// std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
-			//temp++;
-			if (temp > 10)
+			temp++;
+			if (temp > 10000)
 			{
-				std::cout << id  << "EXITING BECAUSE I COULD NOT GET QUEUE" << std::endl;
+				std::cout << id  << " - EXITING BECAUSE I COULD NOT GET QUEUE" << std::endl;
 				std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
 				std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
 				std::cout << id  <<" - " << "total : " << global.total << std::endl;
-				std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+				// std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 				// g_mutex.unlock();
 				break;
 			}
@@ -258,11 +270,11 @@ void worker_routine(int id)
 		// std::cout << id  <<" - " << "shortest distance : " << global.shortest->distance() << std::endl;
 		if (p->distance() > global.shortest->distance()) 
 		{
-			g_mutex.lock();
-			global.counter.bound[p->size()]++;
-			g_mutex.unlock();
+			//g_mutex.lock();
+			//global.counter.bound[p->size()]++;
+			//g_mutex.unlock();
 
-			// set(&global.counter.bound[p->size()], global.counter.bound[p->size()], global.counter.bound[p->size()] + 1);
+			set(&global.counter.bound[p->size()], global.counter.bound[p->size()], global.counter.bound[p->size()] + 1);
 			// g_mutex.unlock();
 			continue; 
 		}
@@ -273,12 +285,18 @@ void worker_routine(int id)
 		// if (p->size() >= (p->max() - 8))
 		// std::cout << id  <<" - " << "p.size = " << p->size() << std::endl;
 
-		if (p->size() >= ((p->max() * 3) / 4))
+		//if (p->size() >= ((p->max() * 3) / 4))
+
+
+		//if (p->size() >= (p->max() - 8))
+		if (p->size() >= (p->max() - LIMIT_MAX_PATH))
 		{
+			// std::cout << "Created enough paths" << std::endl;
 			// Do the job ourselves
 			//if((count++ % 100) == 0) 
 			// std::cout << id  <<" - " << "branch_and_bound" << std::endl;
 			//g_mutex.lock();
+			// std::cout << "before branch_and_bound() - Size : " << p->size() << std::endl;
 			branch_and_bound(p);
 			//g_mutex.unlock();
 			// std::cout << id  <<" - " << "branch_and_bound done" << std::endl;
@@ -286,19 +304,31 @@ void worker_routine(int id)
 		}
 		else
 		{
+			// std::cout << "worker_routine() - (p->max() - 5) : " << (p->max() - 5) << std::endl;
+			// std::cout << "worker_routine() - Size : " << p->size() << std::endl;
+
 			// if((count++ % 10) == 0) 
 				// std::cout << id  <<" - " << "split the job" << std::endl;
 		
 			// Split the job
+			// std::cout << id << " - " << "--- PATH : "<< p << std::endl;
 			for(int x = 0; x < g_graph->size(); x++)
 			{
-				new_p = new Path(g_graph);
-				new_p->copy(p);
-				if (!p->contains(x))
+				if(!p->contains(x))
 				{
+					// std::cout << id  <<" - " << "adding : " << x << std::endl;
+					new_p = new Path(g_graph);
+					new_p->copy(p);
+
 					new_p->add(x);
+
 					g_fifo.enqueue(new_p);
+					
 					// std::cout << id  <<" - " << "enqueing : " << x << std::endl;
+				}
+				else
+				{
+					// std::cout << id  <<" - " << "already contains : " << x << std::endl;
 				}
 			}
 		}
@@ -316,10 +346,10 @@ static void branch_and_bound(Path* current)
 		// this is a leaf
 		current->add(0);
 		// if (global.verbose & VER_COUNTERS)
-		g_mutex.lock();
-		global.counter.verified++;
-		g_mutex.unlock();
-		// set(&global.counter.verified, global.counter.verified, global.counter.verified + 1);
+		// g_mutex.lock();
+		// global.counter.verified++;
+		// g_mutex.unlock();
+		set(&global.counter.verified, global.counter.verified, global.counter.verified + 1);
 
 		// g_mutex.lock();
 		if (current->distance() < global.shortest->distance()) 
@@ -327,12 +357,14 @@ static void branch_and_bound(Path* current)
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			
-			g_mutex.lock();
+			// g_mutex.lock();
+			std::cout << "new shortest: " << current->distance() << '\n';
+			std::cout << "old shortest: " << global.shortest->distance() << '\n';
 			global.shortest->copy(current);
-			global.counter.found++;
-			g_mutex.unlock();
+			// global.counter.found++;
+			// g_mutex.unlock();
 			// if (global.verbose & VER_COUNTERS)
-			// set(&global.counter.found, global.counter.found, global.counter.found + 1);
+			set(&global.counter.found, global.counter.found, global.counter.found + 1);
 		}
 		// g_mutex.unlock();
 		current->pop();
@@ -360,10 +392,11 @@ static void branch_and_bound(Path* current)
 				std::cout << "bound " << current << '\n';
 			// if (global.verbose & VER_COUNTERS)
 
-			g_mutex.lock();
-			global.counter.bound[current->size()]++;
-			g_mutex.unlock();
-			//set(&global.counter.bound[current->size()], global.counter.bound[current->size()], global.counter.bound[current->size()] + 1);
+			// g_mutex.lock();
+			// std::cout << " - bound at size : " << current->size() << std::endl;
+			// global.counter.bound[current->size()]++;
+			// g_mutex.unlock();
+			set(&global.counter.bound[current->size()], global.counter.bound[current->size()], global.counter.bound[current->size()] + 1);
 		}
 
 	}
@@ -375,13 +408,18 @@ void reset_counters(int size)
 	global.size = size;
 	global.counter.verified = 0;
 	global.counter.found = 0;
-	global.counter.bound = new int[global.size];
-	global.fact = new int[global.size];
-	for (int i=0; i<global.size; i++) {
+	global.counter.bound = new uint64_t[global.size];
+	global.fact = new uint64_t[global.size];
+	for (uint64_t i=0; i<global.size; i++) {
 		global.counter.bound[i] = 0;
 		if (i) {
 			int pos = global.size - i;
-			global.fact[pos] = (i-1) ? (i * global.fact[pos+1]) : 1;
+			//global.fact[pos] = (i-1) ? (i * global.fact[pos+1]) : 1;
+
+			if((i - 1) != 0)
+				global.fact[pos] = i * global.fact[pos+1];
+			else
+				global.fact[pos] = 1;
 		}
 	}
 	global.total = global.fact[0] = global.fact[1];
@@ -393,11 +431,11 @@ void print_counters()
 //	std::cout << "verified: " << global.counter.verified << '\n';
 //	std::cout << "found shorter: " << global.counter.found << '\n';
 //	std::cout << "bound (per level):";
-	for (int i=0; i<global.size; i++)
+	for (uint64_t i=0; i<global.size; i++)
 		std::cout << ' ' << global.counter.bound[i];
 	std::cout << "\nbound equivalent (per level): ";
 	int equiv = 0;
-	for (int i=0; i<global.size; i++) {
+	for (uint64_t i=0; i<global.size; i++) {
 		int e = global.fact[i] * global.counter.bound[i];
 		std::cout << ' ' << e;
 		equiv += e;

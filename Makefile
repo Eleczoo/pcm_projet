@@ -1,8 +1,8 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
-#CFLAGS=-O3 -Wall
-CFLAGS= -O2 -Wall -g
-#LDFLAGS=-O3 -lm
-LDFLAGS= -O2 -lm -g
+CFLAGS=-O3 -Wall
+# CFLAGS= -O2 -Wall -g
+LDFLAGS=-O3 -lm
+# LDFLAGS= -O2 -lm -g
 
 #all: main fifo atomic 
 all: main
