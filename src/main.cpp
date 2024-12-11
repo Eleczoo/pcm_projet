@@ -12,7 +12,7 @@
 #include "death_handler.h"
 
 
-#define NB_THREADS 4
+#define NB_THREADS 3
 
 enum Verbosity {
 	VER_NONE = 0,

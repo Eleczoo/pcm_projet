@@ -10,7 +10,7 @@
 
 #define SENTINEL_HEAD 0xFFFF5555
 #define NB_FREE_NODES 100000
-#define DEBUG 1
+//#define DEBUG 1
 
 typedef Path DATA;
 
@@ -323,7 +323,7 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 		#endif
 		if (last == queue[TAIL].get(last_stamp))
 		{
-			// If its the last, no operation is in progress
+			// If its the last (tail), no operation is in progress
 			if (next == nullptr)
 			{
 				// ? Set the current tail's next to our new node
@@ -335,6 +335,8 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 					#ifdef DEBUG
 					std::cout << "--- END ENQUEUE NODE" << std::endl;
 					#endif
+					//std::cout << "!";
+
 					return;
 				}
 			}
@@ -345,6 +347,7 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 					std::cout << "--- ENQUEUE ELSE" << std::endl;
 					#endif
 					//std::cout << ".";
+					//std::cout << "--- TEST : ENQUEUE ELSE" << std::endl;
 					queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 		}
