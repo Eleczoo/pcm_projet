@@ -10,6 +10,7 @@
 
 #define SENTINEL_HEAD 0xFFFF5555
 #define NB_FREE_NODES 100000
+#define DEBUG 1
 
 typedef Path DATA;
 
@@ -99,16 +100,23 @@ LockFreeQueue::~LockFreeQueue()
 
 bool LockFreeQueue::enqueue(DATA* value)
 {
-	//std::cout << "ENQUEUE" << std::endl;
+	#ifdef DEBUG
+		std::cout << "ENQUEUE" << std::endl;
+	#endif
 
 	//std::cout << "Enqueuing: " << *value << std::endl;
 	Node* node = __get_free_node();
 	if (!node) return false;
 
 	node->value = value;
-	//std::cout << "Node value: " << *node->value << std::endl;
+	#ifdef DEBUG
+		std::cout << "Node value: " << value << std::endl;
+	#endif
 	__enqueue_node(fifo, node);
-	//std::cout << "--- END ENQUEUE" << std::endl;
+
+	#ifdef DEBUG
+		std::cout << "--- END ENQUEUE" << std::endl;
+	#endif
 
 	return true;
 }
@@ -122,7 +130,10 @@ DATA* LockFreeQueue::dequeue()
 	Node* next;
 	uint64_t first_stamp, last_stamp, next_stamp;
 
-	//this->show_queue();
+	#ifdef DEBUG
+	this->show_queue();
+	#endif
+
 	
 	while (true)
 	{
@@ -130,14 +141,13 @@ DATA* LockFreeQueue::dequeue()
 		last = fifo[TAIL].get(last_stamp);
 		next = first->next.get(next_stamp);
 
-
-		// std::cout << "------ dequeue() FIRST : " << first->value->size() << std::endl;
-		// std::cout << "------ dequeue() LAST : " << last->value->size() << std::endl;
-		// std::cout << "------ dequeue() NEXT : " << next->value->size() << std::endl;
-		// std::cout << "------ dequeue() FIRST : " << first << std::endl;
-		// std::cout << "------ dequeue() LAST : " << last << std::endl;
-		// std::cout << "------ dequeue() NEXT : " << next << std::endl;
-
+		#ifdef DEBUG
+		std::cout << "------ dequeue() LAST : " << last->value->size() << std::endl;
+		//std::cout << "------ dequeue() NEXT : " << next->value->size() << std::endl;
+		std::cout << "------ dequeue() FIRST : " << first << std::endl;
+		std::cout << "------ dequeue() LAST : " << last << std::endl;
+		std::cout << "------ dequeue() NEXT : " << next << std::endl;
+		#endif
 
 		if (first == fifo[HEAD].get(first_stamp))
 		{
@@ -146,12 +156,16 @@ DATA* LockFreeQueue::dequeue()
 			{
 				if (!next) 
 				{
-					// std::cout << "--- END DEQUEUE NULL PTR" << std::endl;
+					#ifdef DEBUG
+					std::cout << "--- END DEQUEUE NULL PTR" << std::endl;
+					#endif
 					return nullptr;
 				}
 
 				// ! Finish the operation for the other thread
-				//std::cout << "--- DEQUEUE HELP" << std::endl;
+				#ifdef DEBUG
+				std::cout << "--- DEQUEUE HELP" << std::endl;
+				#endif
 				fifo[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 			else
@@ -163,7 +177,9 @@ DATA* LockFreeQueue::dequeue()
 				ret = first->next.cas(next, next->next.get(next_stamp), next_stamp, next_stamp + 1);
 				if(!ret)
 				{
-					//std::cout << "DEQUEU CAS" << std::endl;
+					#ifdef DEBUG
+					std::cout << "DEQUEU CAS" << std::endl;
+					#endif
 					continue;
 				}
 
@@ -178,7 +194,9 @@ DATA* LockFreeQueue::dequeue()
 				}
 
 				free_node(next);
-				//std::cout << "--- END DEQUEUE" << std::endl;
+				#ifdef DEBUG
+				std::cout << "--- END DEQUEUE" << std::endl;
+				#endif
 				return value;
 			}
 		}
@@ -195,8 +213,8 @@ void LockFreeQueue::show_queue()
 	Node* current = fifo[HEAD].get(stamp_osef);
 	Node* tail = fifo[TAIL].get(stamp_osef);
 
-	//printf("show_queue() HEAD : %p\n", current);
-	//printf("show_queue() TAIL : %p\n", tail);
+	printf("show_queue() HEAD : %p\n", current);
+	printf("show_queue() TAIL : %p\n", tail);
 
 
 	while (current != fifo[TAIL].get(stamp_osef))
@@ -205,8 +223,15 @@ void LockFreeQueue::show_queue()
 			break;
 		// current->value.print(std::cout);
 
-		//std::cout << "show_queue() current " << current  << std::endl;
-		//printf("show_queue() current.value[%ld] : %p\n", i++, current->value);
+		std::cout << "show_queue() current " << current  << std::endl;
+		if (i == 0)
+		{
+			printf("show_queue() current.value[%ld] : %p\n", i++, current->value);
+		}
+		else
+		{
+			std::cout << "show_queue() Value[" << i++ << "] = " << current->value << std::endl;
+		}
 		//std::cout << "show_queue() current->value " << current->value  << std::endl;
 		// std::cout << "show_queue() Value[" << i++ << "] = " << current->value << std::endl;
 		//std::cout << "NEXT : " << current->next << std::endl;
@@ -219,15 +244,22 @@ void LockFreeQueue::show_queue()
 
 	}
 	// printf("show_queue() current.value[%d] : %p\n", i, current->value);
-	//std::cout << "show_queue() Value[" << i++ << "] = " << current->value << std::endl;
+	if (i != 0)
+	{
+		std::cout << "show_queue() Value[" << i++ << "] = " << current->value << std::endl;
+	}
 
 	//std::cout << "TAIL = " << *current->value << std::endl;
-	//std::cout << "End of queue" << std::endl;
+	#ifdef DEBUG
+	std::cout << "End of queue" << std::endl;
+	#endif
 }
 
 Node* LockFreeQueue::__get_free_node()
 {
-	// std::cout << "GET FREE NODE" << std::endl;
+	#ifdef DEBUG
+	std::cout << "GET FREE NODE" << std::endl;
+	#endif
 
 	Node* first;
 	Node* last;
@@ -252,8 +284,9 @@ Node* LockFreeQueue::__get_free_node()
 			{
 				if (free_nodes[HEAD].cas(first, next, first_stamp, first_stamp + 1))
 				{
-					// std::cout << "--- END GET FREE NODE" << std::endl;
-					
+					#ifdef DEBUG
+					std::cout << "--- END GET FREE NODE" << std::endl;
+					#endif
 					return first;
 				}
 			}
@@ -268,7 +301,9 @@ void LockFreeQueue::free_node(Node* node)
 
 void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 {
-	// std::cout << "ENQUEUE NODE" << std::endl;
+	#ifdef DEBUG
+	std::cout << "ENQUEUE NODE" << std::endl;
+	#endif
 
 	Node* last;
 	Node* next;
@@ -282,9 +317,10 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 		last = queue[TAIL].get(last_stamp);
 		next = last->next.get(next_stamp);
 
-		// std::cout << "------ enqueue() LAST : " << last << std::endl;
-		// std::cout << "------ enqueue() NEXT : " << next << std::endl;
-
+		#ifdef DEBUG
+		std::cout << "------ __enqueue_node() LAST : " << last << std::endl;
+		std::cout << "------ __enqueue_node() NEXT : " << next << std::endl;
+		#endif
 		if (last == queue[TAIL].get(last_stamp))
 		{
 			// If its the last, no operation is in progress
@@ -296,19 +332,27 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 				if(ret)
 				{
 					queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
-					// std::cout << "--- END ENQUEUE NODE" << std::endl;
+					#ifdef DEBUG
+					std::cout << "--- END ENQUEUE NODE" << std::endl;
+					#endif
 					return;
 				}
 			}
 			else // The previous action has not been completed
 			{
 					// Finish the operation for the other thread
-					// std::cout << "--- ENQUEUE ELSE" << std::endl;
+					#ifdef DEBUG
+					std::cout << "--- ENQUEUE ELSE" << std::endl;
+					#endif
 					//std::cout << ".";
 					queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 		}
 	}
+
+	#ifdef DEBUG
+	std::cout << "--- END ENQUEUE NODE" << std::endl;
+	#endif
 }
 
 

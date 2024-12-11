@@ -9,9 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mutex>
+#include "death_handler.h"
 
 
-#define NB_THREADS 16
+#define NB_THREADS 4
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -64,20 +65,23 @@ void segfault_sigaction(int signal, siginfo_t *si, void *arg)
     exit(0);
 }
 
+// ! https://github.com/vmarkovtsev/DeathHandler/tree/master
+
 
 int main(int argc, char* argv[])
 {
 	//freopen("output.txt","w",stdout);
 
-	struct sigaction sa;
+	//struct sigaction sa;
 
-    memset(&sa, 0, sizeof(struct sigaction));
-    sigemptyset(&sa.sa_mask);
-    sa.sa_sigaction = segfault_sigaction;
-    sa.sa_flags   = SA_SIGINFO;
+    //memset(&sa, 0, sizeof(struct sigaction));
+    //sigemptyset(&sa.sa_mask);
+    //sa.sa_sigaction = segfault_sigaction;
+    //sa.sa_flags   = SA_SIGINFO;
 
-    sigaction(SIGSEGV, &sa, NULL);
+    //sigaction(SIGSEGV, &sa, NULL);
 
+	Debug::DeathHandler dh;
 
 	char* fname = 0;
 	if (argc == 2) 
@@ -182,7 +186,7 @@ void worker_routine(int id)
 	int temp = 0; // Remove this
 	//uint64_t count = 0; 
 	// return;
-	g_mutex.lock();
+	// g_mutex.lock();
 
 	//std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
 	std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
@@ -254,7 +258,10 @@ void worker_routine(int id)
 		// std::cout << id  <<" - " << "shortest distance : " << global.shortest->distance() << std::endl;
 		if (p->distance() > global.shortest->distance()) 
 		{
+			g_mutex.lock();
 			global.counter.bound[p->size()]++;
+			g_mutex.unlock();
+
 			// set(&global.counter.bound[p->size()], global.counter.bound[p->size()], global.counter.bound[p->size()] + 1);
 			// g_mutex.unlock();
 			continue; 
@@ -278,7 +285,7 @@ void worker_routine(int id)
 			// std::cout << id  <<" - " << "BAB" << std::endl;
 		}
 		else
-		{ 
+		{
 			// if((count++ % 10) == 0) 
 				// std::cout << id  <<" - " << "split the job" << std::endl;
 		
@@ -296,7 +303,7 @@ void worker_routine(int id)
 			}
 		}
 	}
-	g_mutex.unlock();
+	// g_mutex.unlock();
 }
 
 static void branch_and_bound(Path* current)
@@ -309,9 +316,9 @@ static void branch_and_bound(Path* current)
 		// this is a leaf
 		current->add(0);
 		// if (global.verbose & VER_COUNTERS)
-		// g_mutex.lock();
+		g_mutex.lock();
 		global.counter.verified++;
-		// g_mutex.unlock();
+		g_mutex.unlock();
 		// set(&global.counter.verified, global.counter.verified, global.counter.verified + 1);
 
 		// g_mutex.lock();
@@ -320,10 +327,10 @@ static void branch_and_bound(Path* current)
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			
-			//g_mutex.lock();
+			g_mutex.lock();
 			global.shortest->copy(current);
 			global.counter.found++;
-			//g_mutex.unlock();
+			g_mutex.unlock();
 			// if (global.verbose & VER_COUNTERS)
 			// set(&global.counter.found, global.counter.found, global.counter.found + 1);
 		}
@@ -353,9 +360,9 @@ static void branch_and_bound(Path* current)
 				std::cout << "bound " << current << '\n';
 			// if (global.verbose & VER_COUNTERS)
 
-			// g_mutex.lock();
+			g_mutex.lock();
 			global.counter.bound[current->size()]++;
-			// g_mutex.unlock();
+			g_mutex.unlock();
 			//set(&global.counter.bound[current->size()], global.counter.bound[current->size()], global.counter.bound[current->size()] + 1);
 		}
 
