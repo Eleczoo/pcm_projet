@@ -79,10 +79,16 @@ LockFreeQueue::LockFreeQueue()
 
 	size = 0;
 
+    auto start = std::chrono::system_clock::now();
 	for (int i = 0; i < NB_FREE_NODES-1; i++)
 	{
 		fnodes[i].next.set(&fnodes[i+1], 0);
 	}
+    auto end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "elapsed time: " << elapsed_seconds.count() << "s"
+              << std::endl;
 
 	// printf("Fnode 0 : %p\n", &fnodes[0]);
 
@@ -287,7 +293,12 @@ Node* LockFreeQueue::__get_free_node()
 			if (first == last)
 			{
 				// TODO: remove the malloc ?
-				if (!next) return new Node();
+				if (!next) 
+				{
+					// std::cout << "MALLOC FREE NODE" << std::endl;
+					return new Node();
+				}
+
 				free_nodes[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 			else
