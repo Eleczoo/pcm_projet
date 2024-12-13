@@ -1,8 +1,10 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
 #CFLAGS=-O3 -Wall
-CFLAGS= -O0 -Wall -g
+CFLAGS= -O3 -Wall -fsanitize=address -g
+#CFLAGS= -O0 -Wall -g
 #LDFLAGS=-O3 -lm
-LDFLAGS= -O0 -lm -g
+#LDFLAGS= -O0 -lm -g
+LDFLAGS= -O3 -lm -fsanitize=address -g
 
 #all: main fifo atomic 
 all: main

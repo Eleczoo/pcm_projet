@@ -2,15 +2,19 @@
 #define __FIFO_HPP__
 
 #include <cstdint>
+#include <mutex>
+#include <chrono>
 #include "atomic.hpp"
 #include "path.hpp"
+
 
 #define HEAD 0
 #define TAIL 1
 
 #define SENTINEL_HEAD 0xFFFF5555
-#define NB_FREE_NODES 100000
+#define NB_FREE_NODES 10
 //#define DEBUG 1
+
 
 typedef Path DATA;
 
@@ -19,6 +23,7 @@ class Node
 public:
 	DATA* value;
 	atomic_stamped<Node> next;
+
 
 	Node() 
 	{
@@ -57,6 +62,7 @@ public:
 private:
 	Node sentinel = Node();
 
+
 	// ! Free nodes list head and tail with stamped pointers
 	// Create a pool of free nodes
 
@@ -84,6 +90,9 @@ LockFreeQueue::LockFreeQueue()
 	{
 		fnodes[i].next.set(&fnodes[i+1], 0);
 	}
+	fnodes[NB_FREE_NODES - 1].next.set(nullptr, 0);
+
+
     auto end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end-start;
@@ -116,9 +125,12 @@ bool LockFreeQueue::enqueue(DATA* value)
 
 	//std::cout << "Enqueuing: " << *value << std::endl;
 	Node* node = __get_free_node();
+	
 	if (!node) return false;
-
+	//printf("FREE NODE : %p\n", node);
 	node->value = value;
+	node->next.set(nullptr, 0);
+	
 	#ifdef DEBUG
 		std::cout << "Node value: " << value << std::endl;
 	#endif
@@ -274,13 +286,17 @@ void LockFreeQueue::show_queue()
 Node* LockFreeQueue::__get_free_node()
 {
 	#ifdef DEBUG
-	std::cout << "GET FREE NODE" << std::endl;
+	//std::cout << "GET FREE NODE" << std::endl;
 	#endif
 
 	Node* first;
 	Node* last;
 	Node* next;
 	uint64_t first_stamp, last_stamp, next_stamp;
+
+	// lock the mutex for malloc
+
+	return new Node();
 
 	while (true)
 	{
@@ -295,10 +311,12 @@ Node* LockFreeQueue::__get_free_node()
 				// TODO: remove the malloc ?
 				if (!next) 
 				{
-					// std::cout << "MALLOC FREE NODE" << std::endl;
+					// Timestamp the print using chrono				
+					//std::cout << "GET FREE NODE " << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+					
 					return new Node();
 				}
-
+				//std::cout << "--- FINISH CONNECTING TAIL " << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
 				free_nodes[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 			else
@@ -323,15 +341,17 @@ void LockFreeQueue::free_node(Node* node)
 void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 {
 	#ifdef DEBUG
-	std::cout << "ENQUEUE NODE" << std::endl;
 	#endif
+	//std::cout << "ENQUEUE NODE" << std::endl;
 
 	Node* last;
 	Node* next;
 	uint64_t last_stamp, next_stamp;
 
 	// ? Set the new Node's next to nullptr, because it's the new tail
-	node->next.set(nullptr, 0);
+	// MOVED INTO GET FREE NODE 
+	//node->next.set(nullptr, 0);
+	//uint64_t 
 
 	while (true)
 	{
@@ -345,13 +365,15 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 		if (last == queue[TAIL].get(last_stamp))
 		{
 			// If its the last (tail), no operation is in progress
-			if (next == nullptr)
+			//if (next == nullptr)
+			if (last->next.get(next_stamp) == nullptr)
 			{
 				// ? Set the current tail's next to our new node
 				bool ret;
 				ret = last->next.cas(next, node, next_stamp, next_stamp + 1);
 				if(ret)
 				{
+					// ? Set the tail to the new node
 					queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
 					#ifdef DEBUG
 					std::cout << "--- END ENQUEUE NODE" << std::endl;
@@ -363,20 +385,19 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			}
 			else // The previous action has not been completed
 			{
-					// Finish the operation for the other thread
-					#ifdef DEBUG
-					std::cout << "--- ENQUEUE ELSE" << std::endl;
-					#endif
-					//std::cout << ".";
-					//std::cout << "--- TEST : ENQUEUE ELSE" << std::endl;
-					queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				// Finish the operation for the other thread
+				bool ret;
+				//if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
+				//{
+					
+				//	last->next.set(nullptr, 0);
+
+				//}
+				//else
+				ret = queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 		}
 	}
-
-	#ifdef DEBUG
-	std::cout << "--- END ENQUEUE NODE" << std::endl;
-	#endif
 }
 
 

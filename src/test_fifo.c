@@ -1,23 +1,24 @@
 // This tests the FIFO
-#include <thread>
-#include "graph.hpp"
 #include "atomic.hpp"
+#include "fifo.hpp"
+#include "graph.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
-#include "fifo.hpp"
+
+#include <chrono>
+#include <mutex>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mutex>
+#include <thread>
 
-
-#define NB_THREADS 60
-#define MAX_PUSH 100000 // per thread
-
+#define NB_THREADS 6
+#define MAX_PUSH   100 // per thread
 
 LockFreeQueue g_fifo;
-void worker_routine(int id);
+void		  worker_routine(int id);
+
 int main()
 {
 	std::cout << "Starting " << NB_THREADS << " threads\n";
@@ -32,22 +33,24 @@ int main()
 void worker_routine(int id)
 {
 	uint64_t count = 0;
-	Path p;
+	Path	 p;
 
 	while (count < MAX_PUSH)
 	{
 		bool ret = g_fifo.enqueue(&p);
 		if (ret)
 		{
-			if(count++ % 10000 == 0)
-				std::cout << "Thread " << id << " pushed " << count << "\n";
-			// std::cout << "Thread " << id << " pushed " << count << "\n";
-			//count++;
+			count++;
+			// if (count++ % 10000 == 0)
+			//  std::cout << "Thread " << id << " pushed " << count << "\n";
+			//  std::cout << "Thread " << id << " pushed " << count << "\n";
+			//  count++;
 		}
 		else
 		{
-			std::cout << "Thread " << id << " failed to push " << count << "\n";
+			// std::cout << "Thread " << id << " failed to push " << count << "\n";
 		}
 	}
-	std::cout << "Thread " << id << " finished\n";
+	std::cout << "Thread " << id << " finished "
+			  << std::chrono::system_clock::now().time_since_epoch().count();
 }
