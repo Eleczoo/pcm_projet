@@ -12,7 +12,7 @@
 #define TAIL 1
 
 #define SENTINEL_HEAD 0xFFFF5555
-#define NB_FREE_NODES 10
+#define NB_FREE_NODES 100
 //#define DEBUG 1
 
 
@@ -389,7 +389,7 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 				bool ret;
 				//if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
 				//{
-					
+				//	std::cout << "!! SAME VALUES " << std::endl;	
 				//	last->next.set(nullptr, 0);
 
 				//}

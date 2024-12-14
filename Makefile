@@ -1,23 +1,29 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
 #CFLAGS=-O3 -Wall
-CFLAGS= -O3 -Wall -fsanitize=address -g
-#CFLAGS= -O0 -Wall -g
+#CFLAGS= -O3 -Wall -fsanitize=address,undefined -g
+CFLAGS= -O0 -Wall -g
 #LDFLAGS=-O3 -lm
-#LDFLAGS= -O0 -lm -g
-LDFLAGS= -O3 -lm -fsanitize=address -g
+LDFLAGS= -O0 -lm -g
+#LDFLAGS= -O3 -lm -fsanitize=address,undefined -g
 
 #all: main fifo atomic 
 all: main
 
-main: build/main.o build/death_handler.o
-	c++ -o build/main $(LDFLAGS) build/main.o build/death_handler.o -latomic -ldl
+main: build/main.o
+	c++ -o build/main $(LDFLAGS) build/main.o -latomic -ldl
 
-#build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/fifo.hpp src/atomic.hpp
-build/main.o: src/death_handler.h src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp src/fifo.hpp
+build/main.o: src/fifo.hpp
 	c++ $(CFLAGS) -c src/test_fifo.c -o $@ -latomic
 
-build/death_handler.o: src/death_handler.cc
-	c++ $(CFLAGS) -c src/death_handler.cc -o $@
+# main: build/main.o build/death_handler.o
+# 	c++ -o build/main $(LDFLAGS) build/main.o build/death_handler.o -latomic -ldl
+
+# #build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/fifo.hpp src/atomic.hpp
+# build/main.o: src/death_handler.h src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp src/fifo.hpp
+# 	c++ $(CFLAGS) -c src/test_fifo.c -o $@ -latomic
+
+# build/death_handler.o: src/death_handler.cc
+# 	c++ $(CFLAGS) -c src/death_handler.cc -o $@
 
 #atomic: src/atomic.cpp
 #	g++ -o build/atomic src/atomic.cpp -latomic

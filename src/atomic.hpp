@@ -63,6 +63,9 @@ public:
 	T* get(uint64_t &stamp)
 	{
 		__ref u;
+		//if(ref == nullptr)
+			//printf("ref.val: %p\n", ref);
+
 		__atomic_load(&ref.val, &u.val, __ATOMIC_RELAXED);
 		stamp = u.pair.stamp;
 		return u.pair.ptr;

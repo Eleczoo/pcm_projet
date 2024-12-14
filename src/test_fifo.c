@@ -52,5 +52,5 @@ void worker_routine(int id)
 		}
 	}
 	std::cout << "Thread " << id << " finished "
-			  << std::chrono::system_clock::now().time_since_epoch().count();
+			  << std::chrono::system_clock::now().time_since_epoch().count() << "\n";
 }
