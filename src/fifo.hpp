@@ -12,7 +12,7 @@
 #define TAIL 1
 
 #define SENTINEL_HEAD 0xFFFF5555
-#define NB_FREE_NODES 100
+#define NB_FREE_NODES 10000
 //#define DEBUG 1
 
 
@@ -95,9 +95,9 @@ LockFreeQueue::LockFreeQueue()
 
     auto end = std::chrono::system_clock::now();
 
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    std::cout << "elapsed time: " << elapsed_seconds.count() << "s"
-              << std::endl;
+    //std::chrono::duration<double> elapsed_seconds = end-start;
+    //std::cout << "elapsed time: " << elapsed_seconds.count() << "s"
+    //          << std::endl;
 
 	// printf("Fnode 0 : %p\n", &fnodes[0]);
 
@@ -152,12 +152,14 @@ bool LockFreeQueue::enqueue(DATA* value)
 
 DATA* LockFreeQueue::dequeue()
 {
+	// printf("[LFQ] DEQUEUE\n");
 	// std::cout << "DEQUEUE" << std::endl;
 
 	Node* first;
 	Node* last;
 	Node* next;
-	uint64_t first_stamp, last_stamp, next_stamp;
+	Node* next_next;
+	uint64_t first_stamp, last_stamp, next_stamp, next_next_stamp;
 
 	#ifdef DEBUG
 	this->show_queue();
@@ -169,6 +171,12 @@ DATA* LockFreeQueue::dequeue()
 		first = fifo[HEAD].get(first_stamp);
 		last = fifo[TAIL].get(last_stamp);
 		next = first->next.get(next_stamp);
+		next_next = next->next.get(next_next_stamp);
+
+		//printf("[LFQ] first : %p\n", first);
+		//printf("[LFQ] last : %p\n", last);
+		//printf("[LFQ] next : %p\n", next);
+
 
 		#ifdef DEBUG
 		std::cout << "------ dequeue() LAST : " << last->value->size() << std::endl;
@@ -203,12 +211,9 @@ DATA* LockFreeQueue::dequeue()
 				
 				// Point the head to its next's next node
 				bool ret;
-				ret = first->next.cas(next, next->next.get(next_stamp), next_stamp, next_stamp + 1);
+				ret = first->next.cas(next, next_next, next_stamp, next_stamp + 1);
 				if(!ret)
 				{
-					#ifdef DEBUG
-					std::cout << "DEQUEU CAS" << std::endl;
-					#endif
 					continue;
 				}
 
@@ -298,15 +303,6 @@ Node* LockFreeQueue::__get_free_node()
 	Node* next;
 	static Node* old_node = nullptr;
 	uint64_t first_stamp, last_stamp, next_stamp;
-
-	// lock the mutex for malloc
-
-	Node* node = new Node();
-	//if(old_node == node)
-	//	std::cout << node << " | " << old_node << std::endl;
-
-	old_node = node;
-	return node;
 
 	while (true)
 	{
@@ -403,9 +399,12 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			{
 				// Finish the operation for the other thread
 				//bool ret;
+				if(next == last)
+				{
+					printf("! SAME VALUES ! %p %p\n", next, last);	
+				}
 				//if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
 				//{
-					//printf("! SAME VALUES ! %p %p\n", queue[TAIL].get(last_stamp), last->next.get(next_stamp));	
 					//last->next.set(nullptr, 0);
 				//}
 				//else
