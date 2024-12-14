@@ -16,7 +16,8 @@
 // #define DEBUG 1
 
 
-typedef uint32_t DATA;
+// typedef uint32_t DATA;
+typedef Path DATA;
 
 class Node
 {
@@ -69,7 +70,7 @@ private:
 	atomic_stamped<Node> fifo[2];
 	atomic_stamped<Node> free_nodes[2];
 	Node fnodes[NB_FREE_NODES]; // Actually free nodes
-	DATA values[NB_FREE_NODES]; // VALUES 
+	// DATA values[NB_FREE_NODES]; // VALUES 
 
 	int64_t size;
 
@@ -93,13 +94,13 @@ LockFreeQueue::LockFreeQueue()
 	for (int i = 0; i < NB_FREE_NODES - 1; i++)
 	{
 		fnodes[i].next.set(&fnodes[i + 1], 0);
-		values[i] = 100 + i;
-		fnodes[i].value = &values[i];
+		// values[i] = 100 + i;
+		// fnodes[i].value = &values[i];
 	}
 
 	fnodes[NB_FREE_NODES - 1].next.set(nullptr, 0);
-	values[NB_FREE_NODES - 1] = 100 + NB_FREE_NODES - 1;
-	fnodes[NB_FREE_NODES - 1].value = &values[NB_FREE_NODES - 1];
+	// values[NB_FREE_NODES - 1] = 100 + NB_FREE_NODES - 1;
+	// fnodes[NB_FREE_NODES - 1].value = &values[NB_FREE_NODES - 1];
 
 	sentinel.next.set(nullptr, 0);
 	fifo[HEAD].set(&sentinel, 0); 
@@ -108,8 +109,8 @@ LockFreeQueue::LockFreeQueue()
 	free_nodes[HEAD].set(&fnodes[0], 0);
 	free_nodes[TAIL].set(&fnodes[NB_FREE_NODES-1], 0);
 
-	printf("---- JUST AFTER CREATING THE FIFO ----\n");
-	__show_queue(fifo);
+	// printf("---- JUST AFTER CREATING THE FIFO ----\n");
+	// __show_queue(fifo);
 }
 
 LockFreeQueue::~LockFreeQueue()
@@ -121,18 +122,20 @@ LockFreeQueue::~LockFreeQueue()
 
 Node* LockFreeQueue::__get_free_node()
 {
+	return new Node();
+
 	//printf("__get_free_node\n");
-	Node* n = __dequeue_node(free_nodes); 
-	if (n)
-	{
-		//printf("END __get_free_node\n");
-		return n;
-	}
-	else
-	{
-		//printf("END __get_free_node GIVING new object\n");
-		return new Node();
-	}
+	// Node* n = __dequeue_node(free_nodes); 
+	// if (n)
+	// {
+	// 	//printf("END __get_free_node\n");
+	// 	return n;
+	// }
+	// else
+	// {
+	// 	//printf("END __get_free_node GIVING new object\n");
+	// 	return new Node();
+	// }
 }
 
 void LockFreeQueue::__free_node(Node* node)
@@ -195,6 +198,8 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 
 	while (true)
 	{
+		// printf("BLOQUE - ENQUEUE !!!!\n");
+
 		if(queue[HEAD].get(tail_stamp) == nullptr)
 		{
 			printf("HEAD IS NULL\n");
@@ -257,7 +262,8 @@ DATA* LockFreeQueue::dequeue()
 	if(n != nullptr)
 	{	
 		data = n->value;
-		__free_node(n);
+		delete n;
+		// __free_node(n);
 		return data;
 	}
 	return nullptr;
@@ -289,6 +295,7 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 		//printf("[LFQ] head : %p\n", head);
 		//printf("[LFQ] tail : %p\n", tail);
 		//printf("[LFQ] next : %p\n", next);
+		// printf("BLOQUE - DEQUEUE !!!!\n");
 
 		if (head == queue[HEAD].get(head_stamp))
 		{
@@ -341,37 +348,37 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 
 void LockFreeQueue::__show_queue(atomic_stamped<Node>* fifo)
 {
-	uint64_t stamp_osef, current_stamp;
-	uint64_t i = 0;
+	// uint64_t stamp_osef, current_stamp;
+	// uint64_t i = 0;
 
-	Node* current = fifo[HEAD].get(current_stamp);
-	Node* tail = fifo[TAIL].get(stamp_osef);
+	// Node* current = fifo[HEAD].get(current_stamp);
+	// Node* tail = fifo[TAIL].get(stamp_osef);
 
-	printf("-------\n");
-	printf("show_queue() HEAD  :     (%p)\n", current);
-	printf("show_queue() TAIL  :     (%p)\n", tail);
+	// printf("-------\n");
+	// printf("show_queue() HEAD  :     (%p)\n", current);
+	// printf("show_queue() TAIL  :     (%p)\n", tail);
 
-	while (current != fifo[TAIL].get(stamp_osef))
-	{
-		if(i == 0)
-		{
-			printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
-		}
-		else
-		{
-			printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
-		}
-		current = current->next.get(current_stamp);
-	}
-	if(i == 0)
-	{
-		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
-	}
-	else
-	{
-		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
-	}
-	printf("--------------------------------\n");
+	// while (current != fifo[TAIL].get(stamp_osef))
+	// {
+	// 	if(i == 0)
+	// 	{
+	// 		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
+	// 	}
+	// 	else
+	// 	{
+	// 		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
+	// 	}
+	// 	current = current->next.get(current_stamp);
+	// }
+	// if(i == 0)
+	// {
+	// 	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
+	// }
+	// else
+	// {
+	// 	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
+	// }
+	// printf("--------------------------------\n");
 }
 
 
@@ -379,7 +386,7 @@ void LockFreeQueue::__show_queue(atomic_stamped<Node>* fifo)
 
 void LockFreeQueue::show_queue()
 {
-	__show_queue(fifo);
+	// __show_queue(fifo);
 }
 
 #endif // __FIFO_HPP__
