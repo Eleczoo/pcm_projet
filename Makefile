@@ -4,7 +4,7 @@ CC=clang++
 #LDFLAGS= -O3 -lm -g
 #CFLAGS= -O3 -Wall -g
 
-#LDFLAGS= -O0 -lm -g
+#LDFLAGS= -O0 -Wall -lm -g
 #CFLAGS= -O0 -Wall -g
 
 CFLAGS= -O3 -Wall -fsanitize=address,alignment -Watomic-alignment -g

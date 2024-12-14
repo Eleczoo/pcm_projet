@@ -13,7 +13,7 @@
 
 #define SENTINEL_HEAD 0xFFFF5555
 #define NB_FREE_NODES 10000
-//#define DEBUG 1
+// #define DEBUG 1
 
 
 typedef Path DATA;
@@ -76,6 +76,7 @@ private:
 	Node* __get_free_node();
 	void free_node(Node* node);
 	void __enqueue_node(atomic_stamped<Node>* queue, Node* node);
+	Node* __dequeue_node(atomic_stamped<Node>* queue);
 };
 
 LockFreeQueue::LockFreeQueue()
@@ -152,44 +153,59 @@ bool LockFreeQueue::enqueue(DATA* value)
 
 DATA* LockFreeQueue::dequeue()
 {
+	DATA* data;
+	Node* n = __dequeue_node(fifo);
+	if(n != nullptr)
+	{	
+		data = n->value;
+		// free_node(n);
+		return data;
+	}
+	return nullptr;
+}
+
+
+Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
+{
 	// printf("[LFQ] DEQUEUE\n");
 	// std::cout << "DEQUEUE" << std::endl;
 
-	Node* first;
-	Node* last;
+	Node* head;
+	Node* tail;
 	Node* next;
 	Node* next_next;
-	uint64_t first_stamp, last_stamp, next_stamp, next_next_stamp;
+	uint64_t head_stamp, tail_stamp, next_stamp, next_next_stamp;
 
-	#ifdef DEBUG
-	this->show_queue();
-	#endif
+	// #ifdef DEBUG
+	// this->show_queue();
+	// #endif
 
 	
 	while (true)
 	{
-		first = fifo[HEAD].get(first_stamp);
-		last = fifo[TAIL].get(last_stamp);
-		next = first->next.get(next_stamp);
-		next_next = next->next.get(next_next_stamp);
+		head = queue[HEAD].get(head_stamp);
+		tail = queue[TAIL].get(tail_stamp);
+		next = head->next.get(next_stamp);
+		if (next != nullptr)
+			next_next = next->next.get(next_next_stamp);
 
-		//printf("[LFQ] first : %p\n", first);
-		//printf("[LFQ] last : %p\n", last);
+		//printf("[LFQ] head : %p\n", head);
+		//printf("[LFQ] tail : %p\n", tail);
 		//printf("[LFQ] next : %p\n", next);
 
 
-		#ifdef DEBUG
-		std::cout << "------ dequeue() LAST : " << last->value->size() << std::endl;
-		//std::cout << "------ dequeue() NEXT : " << next->value->size() << std::endl;
-		std::cout << "------ dequeue() FIRST : " << first << std::endl;
-		std::cout << "------ dequeue() LAST : " << last << std::endl;
-		std::cout << "------ dequeue() NEXT : " << next << std::endl;
-		#endif
+		//#ifdef DEBUG
+		//std::cout << "------ dequeue() tail : " << tail->value->size() << std::endl;
+		////std::cout << "------ dequeue() NEXT : " << next->value->size() << std::endl;
+		//std::cout << "------ dequeue() head : " << head << std::endl;
+		//std::cout << "------ dequeue() tail : " << tail << std::endl;
+		//std::cout << "------ dequeue() NEXT : " << next << std::endl;
+		//#endif
 
-		if (first == fifo[HEAD].get(first_stamp))
+		if (head == queue[HEAD].get(head_stamp))
 		{
-			// ! If the queue is empty
-			if (first == last)
+			// ! If the fifo is empty
+			if (head == tail)
 			{
 				if (!next) 
 				{
@@ -203,38 +219,33 @@ DATA* LockFreeQueue::dequeue()
 				#ifdef DEBUG
 				std::cout << "--- DEQUEUE HELP" << std::endl;
 				#endif
-				fifo[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
 			}
 			else
 			{
-				DATA* value = next->value;
-				
-				// Point the head to its next's next node
-				bool ret;
-				ret = first->next.cas(next, next_next, next_stamp, next_stamp + 1);
-				if(!ret)
-				{
-					continue;
-				}
-
 				// Only sentinel remains
-				if(first->next.get(next_stamp) == nullptr)
+				if(next_next == nullptr)
 				{
 					// set the tail like the head, pointing to the sentinel
-					do
-					{
-						ret = fifo[TAIL].cas(last, first, last_stamp, last_stamp + 1);
-					} while (ret == false);
+					if (!queue[TAIL].cas(tail, head, tail_stamp, tail_stamp + 1))
+						continue;
 				}
+				
+				//DATA* value = next->value;
+				
+				// Point the head to its next's next node
+				head->next.cas(next, next_next, next_stamp, next_stamp + 1);
 
-				free_node(next);
+
+				//free_node(next);
 				#ifdef DEBUG
 				std::cout << "--- END DEQUEUE" << std::endl;
 				#endif
 
 				this->size--;
 				// std::cout << "Size  - " << this->size << std::endl;
-				return value;
+				return next;
+				//return value;
 			}
 		}
 	}
@@ -294,54 +305,62 @@ void LockFreeQueue::show_queue()
 
 Node* LockFreeQueue::__get_free_node()
 {
-	#ifdef DEBUG
-	//std::cout << "GET FREE NODE" << std::endl;
-	#endif
-
-	Node* first;
-	Node* last;
-	Node* next;
-	static Node* old_node = nullptr;
-	uint64_t first_stamp, last_stamp, next_stamp;
-
-	while (true)
-	{
-		first = free_nodes[HEAD].get(first_stamp);
-		last = free_nodes[TAIL].get(last_stamp);
-		next = first->next.get(next_stamp);
-
-		if (first == free_nodes[HEAD].get(first_stamp))
-		{
-			if (first == last)
-			{
-				// TODO: remove the malloc ?
-				if (!next) 
-				{
-					// Timestamp the print using chrono				
-					//std::cout << "GET FREE NODE " << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
-					
-					return new Node();
-				}
-				//std::cout << "--- FINISH CONNECTING TAIL " << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
-				free_nodes[TAIL].cas(last, next, last_stamp, last_stamp + 1);
-			}
-			else
-			{
-				if (free_nodes[HEAD].cas(first, next, first_stamp, first_stamp + 1))
-				{
-					#ifdef DEBUG
-					std::cout << "--- END GET FREE NODE" << std::endl;
-					#endif
-					return first;
-				}
-			}
-		}
-	}	
+	Node* n = __dequeue_node(free_nodes); 
+	if (n)
+		return n;
+	else;
+		return new Node();
 }
+
+	// #ifdef DEBUG
+	// //std::cout << "GET FREE NODE" << std::endl;
+	// #endif
+
+	// Node* first;
+	// Node* last;
+	// Node* next;
+	// static Node* old_node = nullptr;
+	// uint64_t first_stamp, last_stamp, next_stamp;
+
+	// while (true)
+	// {
+	// 	first = free_nodes[HEAD].get(first_stamp);
+	// 	last = free_nodes[TAIL].get(last_stamp);
+	// 	next = first->next.get(next_stamp);
+
+	// 	if (first == free_nodes[HEAD].get(first_stamp))
+	// 	{
+	// 		if (first == last)
+	// 		{
+	// 			// TODO: remove the malloc ?
+	// 			if (!next) 
+	// 			{
+	// 				// Timestamp the print using chrono				
+	// 				//std::cout << "GET FREE NODE " << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+					
+	// 				return new Node();
+	// 			}
+	// 			//std::cout << "--- FINISH CONNECTING TAIL " << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+	// 			free_nodes[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+	// 		}
+	// 		else
+	// 		{
+	// 			if (free_nodes[HEAD].cas(first, next, first_stamp, first_stamp + 1))
+	// 			{
+	// 				#ifdef DEBUG
+	// 				std::cout << "--- END GET FREE NODE" << std::endl;
+	// 				#endif
+	// 				return first;
+	// 			}
+	// 		}
+	// 	}
+	// }	
 
 void LockFreeQueue::free_node(Node* node)
 {
+	printf("free_node\n");
 	__enqueue_node(free_nodes, node);
+	printf("free_node end\n");
 }
 
 void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
@@ -350,9 +369,9 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 	#endif
 	//std::cout << "ENQUEUE NODE" << std::endl;
 
-	Node* last;
+	Node* tail;
 	Node* next;
-	uint64_t last_stamp, next_stamp;
+	uint64_t tail_stamp, next_stamp;
 
 	// ? Set the new Node's next to nullptr, because it's the new tail
 	// MOVED INTO GET FREE NODE 
@@ -361,32 +380,31 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 
 	while (true)
 	{
-		last = queue[TAIL].get(last_stamp);
-		// Show last
-		if(last == nullptr)
+		tail = queue[TAIL].get(tail_stamp);
+		// Show tail
+		if(tail == nullptr)
 		{
-			printf("LAST : %p - %p\n", last, queue[TAIL].get(last_stamp));
-			//std::cout << "LAST IS NULL" << std::endl;
+			printf("tail : %p - %p\n", tail, queue[TAIL].get(tail_stamp));
+			//std::cout << "tail IS NULL" << std::endl;
 		}
-		next = last->next.get(next_stamp);
+		next = tail->next.get(next_stamp);
 
 		#ifdef DEBUG
-		std::cout << "------ __enqueue_node() LAST : " << last << std::endl;
-		std::cout << "------ __enqueue_node() NEXT : " << next << std::endl;
+		// std::cout << "------ __enqueue_node() tail : " << tail << std::endl;
+		// std::cout << "------ __enqueue_node() NEXT : " << next << std::endl;
 		#endif
-		if (last == queue[TAIL].get(last_stamp))
+		if (tail == queue[TAIL].get(tail_stamp))
 		{
-			// If its the last (tail), no operation is in progress
-			//if (next == nullptr)
+			// If its the tail (tail), no operation is in progress
 			if (next == nullptr)
 			{
 				// ? Set the current tail's next to our new node
 				bool ret;
-				ret = last->next.cas(next, node, next_stamp, next_stamp + 1);
+				ret = tail->next.cas(next, node, next_stamp, next_stamp + 1);
 				if(ret)
 				{
 					// ? Set the tail to the new node
-					queue[TAIL].cas(last, node, last_stamp, last_stamp + 1);
+					queue[TAIL].cas(tail, node, tail_stamp, tail_stamp + 1);
 					#ifdef DEBUG
 					std::cout << "--- END ENQUEUE NODE" << std::endl;
 					#endif
@@ -399,22 +417,22 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			{
 				// Finish the operation for the other thread
 				//bool ret;
-				if(next == last)
+				if(next == tail)
 				{
-					printf("! SAME VALUES ! %p %p\n", next, last);	
+					printf("! SAME VALUES ! %p %p\n", next, tail);	
 				}
-				//if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
+				//if(queue[TAIL].get(tail_stamp) == tail->next.get(next_stamp))
 				//{
-					//last->next.set(nullptr, 0);
+					//tail->next.set(nullptr, 0);
 				//}
 				//else
-				//ret = queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				//ret = queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
 				//if(next == nullptr)
-				//if(last->next.get(next_stamp) == nullptr)
+				//if(tail->next.get(next_stamp) == nullptr)
 				//{
 				//	printf("NEXT IS NULL ????????????\n");
 				//}
-				queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
 			}
 		}
 	}
