@@ -11,7 +11,8 @@ private:
 	union __ref {
 			struct { T* ptr; uint64_t stamp; } pair;
 			__uint128_t val;
-	}__attribute__((aligned(16)));
+	};
+	//}__attribute__((aligned(16)));
 	__ref ref;
 
 public:

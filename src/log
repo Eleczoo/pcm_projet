@@ -1,0 +1,70 @@
+show_queue() [198] : 069 (0x5030000021a0) -> 0x5030000021d0
+show_queue() [199] : 069 (0x5030000021d0) -> (nil)
+--------------------------------
+DONE SHOWING FREE NODE
+__free_node end
+[0] Dequeued ok : 69 (99)
+[0]Number of dequeued elements : 100
+---
+---- JUST AFTER CREATING THE FIFO ----
+show_queue() HEAD  :     (0x58ad9fa52d00)
+show_queue() TAIL  :     (0x58ad9fa52f60)
+show_queue() [000] : 100 (0x58ad9fa52d00) -> 0x58ad9fa52d20
+show_queue() [001] : 101 (0x58ad9fa52d20) -> 0x58ad9fa52d40
+show_queue() [002] : 102 (0x58ad9fa52d40) -> 0x58ad9fa52d60
+show_queue() [003] : 103 (0x58ad9fa52d60) -> 0x58ad9fa52d80
+show_queue() [004] : 104 (0x58ad9fa52d80) -> 0x58ad9fa52da0
+show_queue() [005] : 105 (0x58ad9fa52da0) -> 0x58ad9fa52dc0
+show_queue() [006] : 106 (0x58ad9fa52dc0) -> 0x58ad9fa52de0
+show_queue() [007] : 107 (0x58ad9fa52de0) -> 0x58ad9fa52e00
+show_queue() [008] : 108 (0x58ad9fa52e00) -> 0x58ad9fa52e20
+show_queue() [009] : 109 (0x58ad9fa52e20) -> 0x58ad9fa52e40
+show_queue() [010] : 110 (0x58ad9fa52e40) -> 0x58ad9fa52e60
+show_queue() [011] : 111 (0x58ad9fa52e60) -> 0x58ad9fa52e80
+show_queue() [012] : 112 (0x58ad9fa52e80) -> 0x58ad9fa52ea0
+show_queue() [013] : 113 (0x58ad9fa52ea0) -> 0x58ad9fa52ec0
+show_queue() [014] : 114 (0x58ad9fa52ec0) -> 0x58ad9fa52ee0
+show_queue() [015] : 115 (0x58ad9fa52ee0) -> 0x58ad9fa52f00
+show_queue() [016] : 116 (0x58ad9fa52f00) -> 0x58ad9fa52f20
+show_queue() [017] : 117 (0x58ad9fa52f20) -> 0x58ad9fa52f40
+show_queue() [018] : 118 (0x58ad9fa52f40) -> 0x58ad9fa52f60
+show_queue() [019] : 119 (0x58ad9fa52f60) -> (nil)
+--------------------------------
+Starting 2 threads
+Thread Thread 0 Started
+1 Started
+__free_node 0x58ad9fa52d20
+SHOWING FREE NODE
+__free_node 0x58ad9fa52d20
+SHOWING FREE NODE
+show_queue() HEAD  :     (0x58ad9fa52d00)
+show_queue() TAIL  :     (0x58ad9fa52d00)
+show_queue() [000] : 100 (0x58ad9fa52d00) -> (nil)
+--------------------------------
+DONE SHOWING FREE NODE
+__free_node end
+show_queue() HEAD  :     (0x58ad9fa52d00)
+show_queue() TAIL  :     (0x58ad9fa52d00)
+show_queue() [000] : 100 (0x58ad9fa52d00) -> 0x58ad9fa52d20
+show_queue() [001] : 069 (0x58ad9fa52d20) -> (nil)
+--------------------------------
+DONE SHOWING FREE NODE
+__free_node end
+[0] Dequeued ok : 69 (0)
+__free_node 0x58ad9fa52d40
+SHOWING FREE NODE
+show_queue() HEAD  :     (0x58ad9fa52d00)
+show_queue() TAIL  :     (0x58ad9fa52d20)
+show_queue() [000] : 100 (0x58ad9fa52d00) -> 0x58ad9fa52d20
+show_queue() [001] : 069 (0x58ad9fa52d20) -> 0x58ad9fa52d20
+--------------------------------
+DONE SHOWING FREE NODE
+[1] Dequeued ok : 69 (0)
+__free_node 0x58ad9fa52d60
+SHOWING FREE NODE
+show_queue() HEAD  :     (0x58ad9fa52d00)
+show_queue() TAIL  :     (0x58ad9fa52d20)
+show_queue() [000] : 100 (0x58ad9fa52d00) -> 0x58ad9fa52d20
+show_queue() [001] : 069 (0x58ad9fa52d20) -> 0x58ad9fa52d20
+--------------------------------
+DONE SHOWING FREE NODE
