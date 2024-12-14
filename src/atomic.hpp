@@ -11,7 +11,7 @@ private:
 	union __ref {
 			struct { T* ptr; uint64_t stamp; } pair;
 			__uint128_t val;
-	};
+	}__attribute__((aligned(16)));
 	__ref ref;
 
 public:
@@ -63,8 +63,8 @@ public:
 	T* get(uint64_t &stamp)
 	{
 		__ref u;
-		//if(ref == nullptr)
-			//printf("ref.val: %p\n", ref);
+		//if(&ref.val == nullptr)
+			//printf("ref.val: %p\n", &ref.val);
 
 		__atomic_load(&ref.val, &u.val, __ATOMIC_RELAXED);
 		stamp = u.pair.stamp;

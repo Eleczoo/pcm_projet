@@ -1,14 +1,14 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
 
 CC=clang++
-LDFLAGS= -O3 -lm -g
-CFLAGS= -O3 -Wall -g
+#LDFLAGS= -O3 -lm -g
+#CFLAGS= -O3 -Wall -g
 
 #LDFLAGS= -O0 -lm -g
 #CFLAGS= -O0 -Wall -g
 
-#CFLAGS= -O3 -Wall -fsanitize=address,alignment  -g
-#LDFLAGS= -O3 -lm -fsanitize=address,alignment  -g
+CFLAGS= -O3 -Wall -fsanitize=address,alignment -Watomic-alignment -g
+LDFLAGS= -O3 -lm -fsanitize=address,alignment -Watomic-alignment -g
 
 #all: main fifo atomic 
 all: main

@@ -126,7 +126,11 @@ bool LockFreeQueue::enqueue(DATA* value)
 	//std::cout << "Enqueuing: " << *value << std::endl;
 	Node* node = __get_free_node();
 	
-	if (!node) return false;
+	if (node == nullptr) 
+	{
+		printf("GET_FREE_NODE : %p\n", node);
+		return false;
+	}
 	//printf("FREE NODE : %p\n", node);
 	node->value = value;
 	node->next.set(nullptr, 0);
@@ -292,11 +296,17 @@ Node* LockFreeQueue::__get_free_node()
 	Node* first;
 	Node* last;
 	Node* next;
+	static Node* old_node = nullptr;
 	uint64_t first_stamp, last_stamp, next_stamp;
 
 	// lock the mutex for malloc
 
-	return new Node();
+	Node* node = new Node();
+	//if(old_node == node)
+	//	std::cout << node << " | " << old_node << std::endl;
+
+	old_node = node;
+	return node;
 
 	while (true)
 	{
@@ -356,6 +366,12 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 	while (true)
 	{
 		last = queue[TAIL].get(last_stamp);
+		// Show last
+		if(last == nullptr)
+		{
+			printf("LAST : %p - %p\n", last, queue[TAIL].get(last_stamp));
+			//std::cout << "LAST IS NULL" << std::endl;
+		}
 		next = last->next.get(next_stamp);
 
 		#ifdef DEBUG
@@ -366,7 +382,7 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 		{
 			// If its the last (tail), no operation is in progress
 			//if (next == nullptr)
-			if (last->next.get(next_stamp) == nullptr)
+			if (next == nullptr)
 			{
 				// ? Set the current tail's next to our new node
 				bool ret;
@@ -387,13 +403,18 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			{
 				// Finish the operation for the other thread
 				//bool ret;
-				if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
-				{
-					printf("! SAME VALUES ! %p %p\n", queue[TAIL].get(last_stamp), last->next.get(next_stamp));	
+				//if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
+				//{
+					//printf("! SAME VALUES ! %p %p\n", queue[TAIL].get(last_stamp), last->next.get(next_stamp));	
 					//last->next.set(nullptr, 0);
-				}
+				//}
 				//else
 				//ret = queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				//if(next == nullptr)
+				//if(last->next.get(next_stamp) == nullptr)
+				//{
+				//	printf("NEXT IS NULL ????????????\n");
+				//}
 				queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 		}
