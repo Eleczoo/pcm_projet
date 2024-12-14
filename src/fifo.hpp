@@ -27,24 +27,24 @@ public:
 
 	Node() 
 	{
-		value = nullptr;
-		next = atomic_stamped<Node>();
+		this->value = nullptr;
+		this->next = atomic_stamped<Node>();
 	}
 
 	Node(DATA* value) 
 	{
-		value = value;
-		next = atomic_stamped<Node>();
+		this->value = value;
+		this->next = atomic_stamped<Node>();
 	}
 
 	Node(atomic_stamped<Node> next) {
-		value = nullptr;
-		next = next;
+		this->value = nullptr;
+		this->next = next;
 	}
 
 	Node(DATA* value, atomic_stamped<Node> next) {
-		value = value;
-		next = next;
+		this->value = value;
+		this->next = next;
 	}
 };
 
@@ -386,15 +386,15 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			else // The previous action has not been completed
 			{
 				// Finish the operation for the other thread
-				bool ret;
-				//if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
-				//{
-				//	std::cout << "!! SAME VALUES " << std::endl;	
-				//	last->next.set(nullptr, 0);
-
-				//}
+				//bool ret;
+				if(queue[TAIL].get(last_stamp) == last->next.get(next_stamp))
+				{
+					printf("! SAME VALUES ! %p %p\n", queue[TAIL].get(last_stamp), last->next.get(next_stamp));	
+					//last->next.set(nullptr, 0);
+				}
 				//else
-				ret = queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				//ret = queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
+				queue[TAIL].cas(last, next, last_stamp, last_stamp + 1);
 			}
 		}
 	}

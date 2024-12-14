@@ -14,7 +14,7 @@
 #include <thread>
 
 #define NB_THREADS 6
-#define MAX_PUSH   100 // per thread
+#define MAX_PUSH   1000 // per thread
 
 LockFreeQueue g_fifo;
 void		  worker_routine(int id);
@@ -35,6 +35,8 @@ void worker_routine(int id)
 	uint64_t count = 0;
 	Path	 p;
 
+	std::cout << "Thread " << id << " Started" << "\n";
+
 	while (count < MAX_PUSH)
 	{
 		bool ret = g_fifo.enqueue(&p);
@@ -42,7 +44,7 @@ void worker_routine(int id)
 		{
 			count++;
 			// if (count++ % 10000 == 0)
-			//  std::cout << "Thread " << id << " pushed " << count << "\n";
+			// std::cout << "Thread " << id << " pushed " << count << "\n";
 			//  std::cout << "Thread " << id << " pushed " << count << "\n";
 			//  count++;
 		}

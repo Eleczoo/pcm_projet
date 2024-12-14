@@ -21,7 +21,7 @@ private:
 public:
   ~Path() {
     clear();
-    delete[] _nodes;
+    //delete[] _nodes;
     _nodes = 0;
     _graph = 0;
   }
@@ -74,7 +74,7 @@ public:
 
   void copy(Path *o) {
     if (max() != o->max()) {
-      delete[] _nodes;
+      //delete[] _nodes;
       _nodes = new int[o->max() + 1];
     }
     _graph = o->_graph;
