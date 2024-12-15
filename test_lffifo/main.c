@@ -1,9 +1,12 @@
 // This tests the FIFO
-#include "atomic.hpp"
-#include "fifo.hpp"
-#include "graph.hpp"
-#include "path.hpp"
-#include "tspfile.hpp"
+//#include "atomic.hpp"
+//#include "fifo.hpp"
+//#include "graph.hpp"
+//#include "path.hpp"
+//#include "tspfile.hpp"
+
+#include "lfqueue.h"
+#include <atomic>
 
 #include <chrono>
 #include <mutex>
@@ -22,11 +25,11 @@
 #define COLOR_CYAN    "\x1b[36m"
 #define COLOR_RESET   "\x1b[0m"
 
-#define NB_THREADS_CONSUMER 1
-#define NB_THREADS_PRODUCER 1
+#define NB_THREADS_CONSUMER 3
+#define NB_THREADS_PRODUCER 3
 #define MAX_PUSH   1500 // per thread
 
-LockFreeQueue g_fifo;
+lfqueue_t* g_fifo;
 void		  producer_routine(int id);
 void		  consumer_routine(int id);
 
@@ -46,6 +49,10 @@ int main()
 		   NB_THREADS_CONSUMER);
 	std::thread workers_producer[NB_THREADS_PRODUCER];
 	std::thread workers_consumer[NB_THREADS_CONSUMER];
+
+	g_fifo = (lfqueue_t*)malloc(sizeof(lfqueue_t));
+	if (lfqueue_init(g_fifo) == -1)
+		return -1;
 
 
 	for (int i = 0; i < NB_THREADS_PRODUCER; i++)
@@ -70,7 +77,10 @@ int main()
 		workers_consumer[i].join();
 
 
-	g_fifo.show_queue();
+	lfqueue_destroy(g_fifo);
+
+
+	//g_fifo.show_queue();
 }
 
 void producer_routine(int id)
@@ -79,7 +89,7 @@ void producer_routine(int id)
 
 	for (uint32_t i = 0; i < MAX_PUSH; i++)
 	{
-		g_fifo.enqueue(&p);
+		lfqueue_enq(g_fifo, &p);
 	}
 
 	// if (id == 2) {g_fifo.show_queue();}
@@ -93,9 +103,9 @@ void consumer_routine(int id)
 
 	while (g_dq_count < (MAX_PUSH * NB_THREADS_PRODUCER))
 	{
-		if (g_fifo.dequeue() != nullptr)
+		if (lfqueue_deq(g_fifo) != NULL)
 		{
-			 __atomic_fetch_add(&g_dq_count, 1, __ATOMIC_RELAXED);
+			__atomic_fetch_add(&g_dq_count, 1, __ATOMIC_RELAXED);
 			// printf("[%d] g_dq_count = %d\n", id, g_dq_count);
 			// g_mutex.lock();
 			// g_dq_count++;
