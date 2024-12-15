@@ -22,8 +22,8 @@
 #define COLOR_CYAN    "\x1b[36m"
 #define COLOR_RESET   "\x1b[0m"
 
-#define NB_THREADS_CONSUMER 1
-#define NB_THREADS_PRODUCER 1
+#define NB_THREADS_CONSUMER 50
+#define NB_THREADS_PRODUCER 50
 #define MAX_PUSH   1500 // per thread
 
 LockFreeQueue g_fifo;
@@ -70,7 +70,7 @@ int main()
 		workers_consumer[i].join();
 
 
-	g_fifo.show_queue();
+	// g_fifo.show_queue();
 }
 
 void producer_routine(int id)
@@ -103,7 +103,7 @@ void consumer_routine(int id)
 		}
 		else
 		{
-			printf("[%d] Failed to dequeue g_dq_count = %d\n", id, g_dq_count);
+			// printf("[%d] Failed to dequeue g_dq_count = %d\n", id, g_dq_count);
 			// if (id == 0) {g_fifo.show_queue();}
 		}
 	}

@@ -130,19 +130,6 @@ LockFreeQueue::~LockFreeQueue()
 Node* LockFreeQueue::__get_free_node()
 {
 	return new Node();
-
-	// printf("__get_free_node\n");
-	// Node* n = __dequeue_node(free_nodes); 
-	// if (n)
-	// {
-	// 	//printf("END __get_free_node\n");
-	// 	return n;
-	// }
-	// else
-	// {
-	// 	//printf("END __get_free_node GIVING new object\n");
-	// 	return new Node();
-	// }
 }
 
 void LockFreeQueue::__free_node(Node* node)
@@ -162,117 +149,39 @@ void LockFreeQueue::__free_node(Node* node)
 
 bool LockFreeQueue::enqueue(DATA* value)
 {
-	#ifdef DEBUG
-		printf("%s\n", __func__);
-	#endif
 
-	//std::cout << "Enqueuing: " << *value << std::endl;
 	Node* node = __get_free_node();
-	
 	if (node == nullptr) 
-	{
-		printf("GET_FREE_NODE : %p\n", node);
 		return false;
-	}
-	//printf("value : %p\n", value);
+
 	node->value = value;
 	node->next.set(nullptr, 0);
 	
-	#ifdef DEBUG
-		std::cout << "Node value: " << value << std::endl;
-	#endif
 	__enqueue_node(fifo, node);
 
-	#ifdef DEBUG
-		std::cout << "--- END ENQUEUE" << std::endl;
-	#endif
-
-	this->size++;
-	// std::cout << "Size  - " << this->size << std::endl;
+	//this->size++;
+	__atomic_fetch_add(&this->size, 1, __ATOMIC_RELAXED);
 
 	return true;
 }
 
 void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 {
-	#ifdef DEBUG
-	printf("%s\n", __func__);
-	#endif
-
 	Node* tail;
 	Node* next;
 	uint64_t tail_stamp, next_stamp;
 
 	while (true)
 	{
-		// printf("BLOQUE - ENQUEUE !!!!\n");
-
-		if(queue[HEAD].get(tail_stamp) == nullptr)
-		{
-			printf("HEAD IS NULL\n");
-			__show_queue(fifo);
-			//printf("tail : %p - %p\n", tail, queue[TAIL].get(tail_stamp));
-			// std::cout << "tail IS NULL" << std::endl;
-		}
+		__sync_synchronize();
 		tail = queue[TAIL].get(tail_stamp);
-		// Show tail
-		if(tail == nullptr)
-		{
-			__show_queue(fifo);
-			printf("tail : %p - %p\n", tail, queue[TAIL].get(tail_stamp));
-			// std::cout << "tail IS NULL" << std::endl;
-		}
 		next = tail->next.get(next_stamp);
 
-		//#ifdef DEBUG
-		//std::cout << "------ __enqueue_node() tail : " << tail << std::endl;
-		//std::cout << "------ __enqueue_node() NEXT : " << next << std::endl;
-		//#endif
-		if (tail == queue[TAIL].get(tail_stamp))
+		if(tail->next.cas(nullptr, node, next_stamp, next_stamp + 1))
 		{
-			// If its the tail (tail), no operation is in progress
-			if (next == nullptr)
-			{
-				// ? Set the current tail's next to our new node
-				bool ret;
-				ret = tail->next.cas(next, node, next_stamp, next_stamp + 1);
-				if(ret)
-				{
-					// ? Set the tail to the new node
-					queue[TAIL].cas(tail, node, tail_stamp, tail_stamp + 1);
-					#ifdef DEBUG
-					std::cout << "--- END ENQUEUE NODE" << std::endl;
-					#endif
-					//std::cout << "!";
-
-					return;
-				}
-			}
-			else // The previous action has not been completed
-			{
-				// Finish the operation for the other thread
-				if(next == tail)
-				{
-					printf("! SAME VALUES ! %p %p\n", next, tail);	
-					printf("FIFO Content");
-					__show_queue(fifo);
-					std::cout << std::endl;
-					exit(1);
-				}
-
-				printf("CAS TAIL %p %p\n", tail, next);
-				//printf("BLOQUE ENQUEUE NODE\n");
-				bool ret;
-				ret = queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
-				//if (ret)
-				//	printf("%s--- CAS STATUS : %d %s\n", COLOR_GREEN, ret, COLOR_RESET);
-				//else
-				//{
-				//	printf("%s--- CAS STATUS : %d %s\n", COLOR_RED, ret, COLOR_RESET);
-				//}
-
-
-			}
+			if(!queue[TAIL].cas(tail, node, tail_stamp, tail_stamp + 1))
+				continue;
+			return;
 		}
 	}
 }
@@ -299,7 +208,7 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 	Node* next;
 	Node* next_next;
 	Node* tail_next;
-	uint64_t head_stamp, tail_stamp, next_stamp, next_next_stamp, tail_next_stamp;
+	uint64_t head_stamp, tail_stamp, next_stamp;
 
 	#ifdef DEBUG
 	printf("%s\n", __func__);
@@ -307,19 +216,10 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 	
 	while (true)
 	{
+		__sync_synchronize();
 		head = queue[HEAD].get(head_stamp);
 		tail = queue[TAIL].get(tail_stamp);
 		next = head->next.get(next_stamp);
-		tail_next = tail->next.get(tail_next_stamp);
-
-		if (next != nullptr)
-			next_next = next->next.get(next_next_stamp);
-		// else
-		// 	next_next = nullptr;
-
-		//printf("[LFQ] head : %p\n", head);
-		//printf("[LFQ] tail : %p\n", tail);
-		//printf("[LFQ] next : %p\n", next);
 
 		if (head == queue[HEAD].get(head_stamp))
 		{
@@ -329,9 +229,9 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 				if (next == nullptr) 
 				{
 					#ifdef DEBUG
-					#endif
 					std::cout << "--- END DEQUEUE NULL PTR" << std::endl;
-					__show_queue(queue);
+					//__show_queue(queue);
+					#endif
 					return nullptr;
 				}
 
@@ -339,47 +239,21 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 				#ifdef DEBUG
 				std::cout << "--- DEQUEUE HELP" << std::endl;
 				#endif
-				queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
+				//queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
 			}
 			else
 			{
-				// Only sentinel remains
-				if(next_next == nullptr)
+				if(next)
 				{
-					// printf("next_next == nullptr\n");
-					// set the tail like the head, pointing to the sentinel
-					if (!queue[TAIL].cas(tail, head, tail_stamp, tail_stamp + 1))
-						continue;
-					tail = head;
+					if(queue[HEAD].cas(head, next, head_stamp, head_stamp + 1))
+					{
+						return next;
+					}
 				}
-
-				// A push has already began, we need to finish connecting the tail to last
-				if(tail_next != nullptr)
+				else
 				{
-					// printf("tail_next != nullptr\n");
-					if (!queue[TAIL].cas(tail, tail_next, tail_stamp, tail_stamp + 1))
-						continue;
-					tail = tail_next;
+					return nullptr;
 				}
-
-				if (tail != queue[TAIL].get(tail_stamp))
-				{
-					// printf("continue\n");
-					continue;
-				}
-
-				// Point the head to its next's next node
-				if (!head->next.cas(next, next_next, next_stamp, next_stamp + 1))
-					continue;
-
-
-				#ifdef DEBUG
-				std::cout << "--- END DEQUEUE" << std::endl;
-				#endif
-
-				this->size--;
-				// std::cout << "Size  - " << this->size << std::endl;
-				return next;
 			}
 		}
 	}

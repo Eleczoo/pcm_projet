@@ -211,10 +211,12 @@ _enqueue(lfqueue_t *lfqueue, void* value) {
 	node->value = value;
 	node->next = NULL;
 	node->nextfree = NULL;
-	for (;;) {
+	for (;;) 
+	{
 		__LFQ_SYNC_MEMORY();
 		tail = lfqueue->tail;
-		if (__LFQ_BOOL_COMPARE_AND_SWAP(&tail->next, NULL, node)) {
+		if (__LFQ_BOOL_COMPARE_AND_SWAP(&tail->next, NULL, node)) 
+		{
 			// compulsory swap as tail->next is no NULL anymore, it has fenced on other thread
 			__LFQ_BOOL_COMPARE_AND_SWAP(&lfqueue->tail, tail, node);
 			__lfq_check_free(lfqueue);
