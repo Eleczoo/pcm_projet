@@ -13,7 +13,7 @@
 
 
 #define NB_THREADS 6
-#define LIMIT_MAX_PATH 10
+#define LIMIT_MAX_PATH 8
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -25,6 +25,8 @@ enum Verbosity {
 };
 
 std::mutex g_mutex;
+uint64_t count_non_nul = 0;
+uint64_t count_enqueue = 0;
 
 volatile static struct {
 	Path* shortest;
@@ -168,8 +170,8 @@ int main(int argc, char* argv[])
 
 	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 
-	if (global.verbose & VER_COUNTERS)
-		print_counters();
+	// if (global.verbose & VER_COUNTERS)
+	print_counters();
 
 	return 0;
 }
@@ -231,6 +233,9 @@ void worker_routine(int id)
 			std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
 			std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
 			std::cout << id  <<" - " << "total : " << global.total << std::endl;
+			printf("%d - counted_non_null : %lld\n", id, count_non_nul);
+			printf("%d - counted_enqueue : %lld\n", id, count_enqueue+1);
+			
 			break;
 		}
 
@@ -238,23 +243,35 @@ void worker_routine(int id)
 
 		// ! 1. Dequeue a job
 		p = g_fifo.dequeue();
+		if(p != nullptr)
+		{
+			g_mutex.lock();
+			count_non_nul++;
+			g_mutex.unlock();
+		}
 
 		// std::cout << id  <<" - " << "path : " << p << std::endl;
 
 		if(p == nullptr)
 		{
+			//printf("COULD NOT DEQUEUE\n");
 			// std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
 			temp++;
-			if (temp > 100000)
+			if (temp > 900000)
 			{
-				std::cout << id  << " - EXITING BECAUSE I COULD NOT GET QUEUE" << std::endl;
-				std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
-				std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
-				std::cout << id  <<" - " << "total : " << global.total << std::endl;
+				g_fifo.show_queue();
+				printf("%d - EXITING BECAUSE I COULD NOT GET QUEUE\n", id);
+				printf("%d - cleared_paths: %lu\n", id, cleared_paths);
+				printf("%d - verified : %lu\n", id, global.counter.verified);
+				printf("%d - total : %lu\n", id, global.total);
+				printf("%d - diff : %lld\n",id, global.total - (cleared_paths + global.counter.verified)  );
+				printf("%d - counted_non_null : %lld\n", id, count_non_nul);
+				printf("%d - counted_enqueue : %lld\n", id, count_enqueue+1);
 				// std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 				// g_mutex.unlock();
 				break;
 			}
+			
 			continue;
 		// g_mutex.unlock();
 		}
@@ -322,6 +339,10 @@ void worker_routine(int id)
 					new_p->add(x);
 
 					g_fifo.enqueue(new_p);
+
+					g_mutex.lock();
+					count_enqueue++;
+					g_mutex.unlock();
 					
 					// std::cout << id  <<" - " << "enqueing : " << x << std::endl;
 				}
@@ -357,12 +378,12 @@ static void branch_and_bound(Path* current)
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			
-			// g_mutex.lock();
-			std::cout << "new shortest: " << current->distance() << '\n';
-			std::cout << "old shortest: " << global.shortest->distance() << '\n';
+			g_mutex.lock();
+			// std::cout << "new shortest: " << current->distance() << '\n';
+			// std::cout << "old shortest: " << global.shortest->distance() << '\n';
 			global.shortest->copy(current);
 			// global.counter.found++;
-			// g_mutex.unlock();
+			g_mutex.unlock();
 			// if (global.verbose & VER_COUNTERS)
 			__atomic_fetch_add(&global.counter.found, 1, __ATOMIC_RELAXED);
 		}
@@ -431,7 +452,7 @@ void print_counters()
 //	std::cout << "total: " << global.total << '\n';
 //	std::cout << "verified: " << global.counter.verified << '\n';
 //	std::cout << "found shorter: " << global.counter.found << '\n';
-//	std::cout << "bound (per level):";
+	std::cout << "bound (per level):";
 	for (uint64_t i=0; i<global.size; i++)
 		std::cout << ' ' << global.counter.bound[i];
 	std::cout << "\nbound equivalent (per level): ";

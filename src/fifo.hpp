@@ -348,37 +348,37 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 
 void LockFreeQueue::__show_queue(atomic_stamped<Node>* fifo)
 {
-	// uint64_t stamp_osef, current_stamp;
-	// uint64_t i = 0;
+	uint64_t stamp_osef, current_stamp;
+	uint64_t i = 0;
 
-	// Node* current = fifo[HEAD].get(current_stamp);
-	// Node* tail = fifo[TAIL].get(stamp_osef);
+	Node* current = fifo[HEAD].get(current_stamp);
+	Node* tail = fifo[TAIL].get(stamp_osef);
 
-	// printf("-------\n");
-	// printf("show_queue() HEAD  :     (%p)\n", current);
-	// printf("show_queue() TAIL  :     (%p)\n", tail);
+	printf("-------\n");
+	printf("show_queue() HEAD  :     (%p)\n", current);
+	printf("show_queue() TAIL  :     (%p)\n", tail);
 
-	// while (current != fifo[TAIL].get(stamp_osef))
-	// {
-	// 	if(i == 0)
-	// 	{
-	// 		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
-	// 	}
-	// 	else
-	// 	{
-	// 		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
-	// 	}
-	// 	current = current->next.get(current_stamp);
-	// }
+	while (current != fifo[TAIL].get(stamp_osef))
+	{
+		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
+		// if(i == 0)
+		// {
+		// }
+		// else
+		// {
+			// printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
+		// }
+		current = current->next.get(current_stamp);
+	}
+	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
 	// if(i == 0)
 	// {
-	// 	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
 	// }
 	// else
 	// {
 	// 	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
 	// }
-	// printf("--------------------------------\n");
+	printf("--------------------------------\n");
 }
 
 
@@ -386,7 +386,7 @@ void LockFreeQueue::__show_queue(atomic_stamped<Node>* fifo)
 
 void LockFreeQueue::show_queue()
 {
-	// __show_queue(fifo);
+	__show_queue(fifo);
 }
 
 #endif // __FIFO_HPP__
