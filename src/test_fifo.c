@@ -13,93 +13,89 @@
 #include <string.h>
 #include <thread>
 
-#define NB_THREADS 10
+
+#define COLOR_RED     "\x1b[31m"
+#define COLOR_GREEN   "\x1b[32m"
+#define COLOR_YELLOW  "\x1b[33m"
+#define COLOR_BLUE    "\x1b[34m"
+#define COLOR_MAGENTA "\x1b[35m"
+#define COLOR_CYAN    "\x1b[36m"
+#define COLOR_RESET   "\x1b[0m"
+
+#define NB_THREADS_CONSUMER 3
+#define NB_THREADS_PRODUCER 3
 #define MAX_PUSH   250 // per thread
 
 LockFreeQueue g_fifo;
-void		  worker_routine(int id);
+void		  producer_routine(int id);
+void		  consumer_routine(int id);
 
 typedef uint32_t DATA;
 
+uint32_t g_dq_count = 0;
 
 DATA p = 69;
 // DATA  p = Path();
-DATA* p2;
+
 
 int main()
 {
-	uint32_t counter = 0;
-	std::cout << "Starting " << NB_THREADS << " threads\n";
-	std::thread workers[NB_THREADS];
+	printf("Starting %d producer threads and %d consumer threads\n", NB_THREADS_PRODUCER,
+		   NB_THREADS_CONSUMER);
+	std::thread workers_producer[NB_THREADS_PRODUCER];
+	std::thread workers_consumer[NB_THREADS_CONSUMER];
 
 
-	// for (int i = 0; i < MAX_PUSH * (NB_THREADS + 1); i++)
-	//{
-	//	g_fifo.enqueue(&p);
-	// }
-
-	for (int i = 0; i < NB_THREADS; i++)
-		workers[i] = std::thread(worker_routine, i);
-
-	for (int i = 0; i < NB_THREADS; i++)
-		workers[i].join();
-
-
-	// g_fifo.show_queue();
-	//  DATA* t;
-	//  while (1)
-	//  {
-	//  	t = g_fifo.dequeue();
-	//  	if (t == nullptr)
-	//  		break;
-	//  	counter++;
-	//  }
-	//  printf("Number of dequeued elements : %d\n", counter);
-}
-
-void worker_routine(int id)
-{
-	uint64_t count			  = 0;
-	uint64_t counter_dequeued = 0;
-	uint64_t notdqueued		  = 0;
-	bool	 toggle			  = false;
-
-
-	std::cout << "Thread " << id << " Started" << "\n";
-
-	while (count < MAX_PUSH + 1)
+	for (int i = 0; i < NB_THREADS_PRODUCER; i++)
 	{
-		if (!toggle)
-		{
-			// printf("[%d] enqueuing\n", id);
-			bool ret = g_fifo.enqueue(&p);
-			if (ret)
-				count++;
-			// printf("[%d] enqueued\n", id);
-		}
-		else // Dequeue
-		{
-			// printf("[%d] dequeuing\n", id);
-			p2 = g_fifo.dequeue();
-			// printf("[%d] ptr : %p\n", id, p2);
-			if (p2 != nullptr)
-			{
-				// Dequeued properly
-				// printf("[%d] Dequeued ok : %d (%d)\n", id, *p2, counter_dequeued);
-				counter_dequeued++;
-			}
-			else
-			{
-				notdqueued++;
-				// printf("[%d] Couldnt dequeue\n", id);
-			}
-		}
-
-		toggle = !toggle;
+		workers_producer[i] = std::thread(producer_routine, i);
+	}
+	
+	for (int i = 0; i < NB_THREADS_CONSUMER; i++)
+	{
+		workers_consumer[i] = std::thread(consumer_routine, i);
 	}
 
-	printf("[%d]Number of notqueued elements : %ld\n", id, notdqueued);
-	printf("[%d]Number of dequeued elements : %ld\n", id, counter_dequeued);
-	// std::cout << "Thread " << id << " finished "
-	//  << std::chrono::system_clock::now().time_since_epoch().count() << "\n";
+	for (int i = 0; i < NB_THREADS_PRODUCER; i++)
+		workers_producer[i].join();
+	for (int i = 0; i < NB_THREADS_CONSUMER; i++)
+		workers_consumer[i].join();
+
+
+	g_fifo.show_queue();
+}
+
+void producer_routine(int id)
+{
+	printf("Producer thread %d started\n", id);
+
+	for (uint32_t i = 0; i < MAX_PUSH; i++)
+	{
+		g_fifo.enqueue(&p);
+	}
+
+	// if (id == 2) {g_fifo.show_queue();}
+
+	printf(COLOR_RED "Producer thread %d finished\n" COLOR_RESET, id);
+}
+
+void consumer_routine(int id)
+{
+	printf("Consumer thread %d started\n", id);
+
+	while (g_dq_count < (MAX_PUSH * NB_THREADS_PRODUCER))
+	{
+		if (g_fifo.dequeue() != nullptr)
+		{
+			__atomic_fetch_add(&g_dq_count, 1, __ATOMIC_RELAXED);
+			// printf("[%d] g_dq_count = %d\n", id, g_dq_count);
+		}
+		else
+		{
+			printf("[%d] Failed to dequeue g_dq_count = %d\n", id, g_dq_count);
+			// if (id == 0) {g_fifo.show_queue();}
+		}
+	}
+
+	printf(COLOR_GREEN "Consumer thread %d finished\n" COLOR_RESET, id);
 }

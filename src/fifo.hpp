@@ -8,6 +8,13 @@
 #include "path.hpp"
 
 
+#define COLOR_RED     "\x1b[31m"
+#define COLOR_GREEN   "\x1b[32m"
+#define COLOR_YELLOW  "\x1b[33m"
+#define COLOR_BLUE    "\x1b[34m"
+#define COLOR_MAGENTA "\x1b[35m"
+#define COLOR_CYAN    "\x1b[36m"
+#define COLOR_RESET   "\x1b[0m"
 #define HEAD 0
 #define TAIL 1
 
@@ -124,7 +131,7 @@ Node* LockFreeQueue::__get_free_node()
 {
 	return new Node();
 
-	//printf("__get_free_node\n");
+	// printf("__get_free_node\n");
 	// Node* n = __dequeue_node(free_nodes); 
 	// if (n)
 	// {
@@ -234,8 +241,8 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 					// ? Set the tail to the new node
 					queue[TAIL].cas(tail, node, tail_stamp, tail_stamp + 1);
 					#ifdef DEBUG
+					std::cout << "--- END ENQUEUE NODE" << std::endl;
 					#endif
-					// std::cout << "--- END ENQUEUE NODE" << std::endl;
 					//std::cout << "!";
 
 					return;
@@ -249,12 +256,22 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 					printf("! SAME VALUES ! %p %p\n", next, tail);	
 					printf("FIFO Content");
 					__show_queue(fifo);
+					std::cout << std::endl;
 					exit(1);
 				}
 
-				//printf("CAS TAIL %p %p\n", tail, next);
-				
-				queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
+				printf("CAS TAIL %p %p\n", tail, next);
+				//printf("BLOQUE ENQUEUE NODE\n");
+				bool ret;
+				ret = queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
+				//if (ret)
+				//	printf("%s--- CAS STATUS : %d %s\n", COLOR_GREEN, ret, COLOR_RESET);
+				//else
+				//{
+				//	printf("%s--- CAS STATUS : %d %s\n", COLOR_RED, ret, COLOR_RESET);
+				//}
+
+
 			}
 		}
 	}
@@ -300,18 +317,18 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 		//printf("[LFQ] head : %p\n", head);
 		//printf("[LFQ] tail : %p\n", tail);
 		//printf("[LFQ] next : %p\n", next);
-		// printf("BLOQUE - DEQUEUE !!!!\n");
 
 		if (head == queue[HEAD].get(head_stamp))
 		{
 			// ! If the fifo is empty
 			if (head == tail)
 			{
-				if (!next) 
+				if (next == nullptr) 
 				{
 					#ifdef DEBUG
 					#endif
 					std::cout << "--- END DEQUEUE NULL PTR" << std::endl;
+					__show_queue(queue);
 					return nullptr;
 				}
 
@@ -362,29 +379,29 @@ void LockFreeQueue::__show_queue(atomic_stamped<Node>* fifo)
 	printf("-------\n");
 	// printf("show_queue() HEAD  :     (%p) -> %p\n", fifo[HEAD], current);
 	// printf("show_queue() TAIL  :     (%p) -> %p\n", fifo[TAIL], tail);
-	printf("show_queue() HEAD  :     (%p) -> %p\n", &fifo[HEAD], fifo[HEAD]);
-	printf("show_queue() TAIL  :     (%p) -> %p\n", &fifo[TAIL], fifo[TAIL]);
+	// printf("show_queue() HEAD  :     (%p)\n", current);
+	// printf("show_queue() TAIL  :     (%p)\n", tail);
+	printf("show_queue() HEAD  :     (%p) -> %p\n", &fifo[HEAD], current);
+	printf("show_queue() TAIL  :     (%p) -> %p -> %p\n", &fifo[TAIL], tail, tail->next.get(stamp_osef));
 
 	while (current != fifo[TAIL].get(stamp_osef))
 	{
-		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
-		// if(i == 0)
-		// {
-		// }
-		// else
-		// {
-			// printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
-		// }
+		printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next.get(stamp_osef));
+		
+		if (current->next.get(current_stamp) == nullptr)
+		{
+			break;
+		}
 		current = current->next.get(current_stamp);
 	}
-	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next);
-	// if(i == 0)
-	// {
-	// }
-	// else
-	// {
-	// 	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, *current->value, current, current->next);
-	// }
+	printf("show_queue() [%03lu] : %03d (%p) -> %p\n", i++, 0, current, current->next.get(stamp_osef));
+
+
+	current = fifo[HEAD].get(current_stamp);
+	tail = fifo[TAIL].get(stamp_osef);
+	printf("after show_queue() HEAD  :     (%p) -> %p\n", &fifo[HEAD], current);
+	printf("after show_queue() TAIL  :     (%p) -> %p -> %p\n", &fifo[TAIL], tail, tail->next.get(stamp_osef));
+
 	printf("--------------------------------\n");
 }
 

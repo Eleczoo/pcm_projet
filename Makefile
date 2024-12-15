@@ -2,19 +2,19 @@
 
 CC=clang++
 #CC=g++
-LDFLAGS= -O3 -lm -g
-CFLAGS= -O3 -Wall -g
+#LDFLAGS= -O3 -lm -g
+#CFLAGS= -O3 -Wall -g
 
-#LDFLAGS= -O0 -Wall -Wno-format -lm -g
-#CFLAGS= -O0 -Wall -Wno-format -g
+LDFLAGS= -O0 -Wall -Wno-format -lm -g
+CFLAGS= -O0 -Wall -Wno-format -g
 
-#CFLAGS= -O3 -Wall -fsanitize=address,alignment -Watomic-alignment -g
-#LDFLAGS= -O3 -lm -fsanitize=address,alignment -Watomic-alignment -g
+# CFLAGS= -O3 -Wall -fsanitize=address,alignment -Watomic-alignment -g
+# LDFLAGS= -O3 -lm -fsanitize=address,alignment -Watomic-alignment -g
 #CFLAGS= -O3 -Wall -fsanitize=address,alignment  -g
 #LDFLAGS= -O3 -lm -fsanitize=address,alignment  -g
 
 #all: main fifo atomic 
-all: main
+all: fifo
 
 main: build/main.o
 	$(CC) -o build/main $(LDFLAGS) build/main.o -latomic -ldl
