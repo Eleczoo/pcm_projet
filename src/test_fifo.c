@@ -22,13 +22,15 @@
 #define COLOR_CYAN    "\x1b[36m"
 #define COLOR_RESET   "\x1b[0m"
 
-#define NB_THREADS_CONSUMER 3
-#define NB_THREADS_PRODUCER 3
-#define MAX_PUSH   250 // per thread
+#define NB_THREADS_CONSUMER 1
+#define NB_THREADS_PRODUCER 1
+#define MAX_PUSH   1500 // per thread
 
 LockFreeQueue g_fifo;
 void		  producer_routine(int id);
 void		  consumer_routine(int id);
+
+std::mutex g_mutex;
 
 typedef uint32_t DATA;
 
@@ -50,14 +52,20 @@ int main()
 	{
 		workers_producer[i] = std::thread(producer_routine, i);
 	}
-	
+
+	// for (int i = 0; i < NB_THREADS_PRODUCER; i++)
+	// 	workers_producer[i].join();
+
+
 	for (int i = 0; i < NB_THREADS_CONSUMER; i++)
 	{
 		workers_consumer[i] = std::thread(consumer_routine, i);
 	}
 
+
 	for (int i = 0; i < NB_THREADS_PRODUCER; i++)
 		workers_producer[i].join();
+
 	for (int i = 0; i < NB_THREADS_CONSUMER; i++)
 		workers_consumer[i].join();
 
@@ -87,8 +95,11 @@ void consumer_routine(int id)
 	{
 		if (g_fifo.dequeue() != nullptr)
 		{
-			__atomic_fetch_add(&g_dq_count, 1, __ATOMIC_RELAXED);
+			// __atomic_fetch_add(&g_dq_count, 1, __ATOMIC_RELAXED);
 			// printf("[%d] g_dq_count = %d\n", id, g_dq_count);
+			g_mutex.lock();
+			g_dq_count++;
+			g_mutex.unlock();
 		}
 		else
 		{

@@ -298,7 +298,8 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 	Node* tail;
 	Node* next;
 	Node* next_next;
-	uint64_t head_stamp, tail_stamp, next_stamp, next_next_stamp;
+	Node* tail_next;
+	uint64_t head_stamp, tail_stamp, next_stamp, next_next_stamp, tail_next_stamp;
 
 	#ifdef DEBUG
 	printf("%s\n", __func__);
@@ -309,10 +310,12 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 		head = queue[HEAD].get(head_stamp);
 		tail = queue[TAIL].get(tail_stamp);
 		next = head->next.get(next_stamp);
+		tail_next = tail->next.get(tail_next_stamp);
+
 		if (next != nullptr)
 			next_next = next->next.get(next_next_stamp);
-		else
-			next_next = nullptr;
+		// else
+		// 	next_next = nullptr;
 
 		//printf("[LFQ] head : %p\n", head);
 		//printf("[LFQ] tail : %p\n", tail);
@@ -343,11 +346,28 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 				// Only sentinel remains
 				if(next_next == nullptr)
 				{
+					// printf("next_next == nullptr\n");
 					// set the tail like the head, pointing to the sentinel
 					if (!queue[TAIL].cas(tail, head, tail_stamp, tail_stamp + 1))
 						continue;
+					tail = head;
 				}
-				
+
+				// A push has already began, we need to finish connecting the tail to last
+				if(tail_next != nullptr)
+				{
+					// printf("tail_next != nullptr\n");
+					if (!queue[TAIL].cas(tail, tail_next, tail_stamp, tail_stamp + 1))
+						continue;
+					tail = tail_next;
+				}
+
+				if (tail != queue[TAIL].get(tail_stamp))
+				{
+					// printf("continue\n");
+					continue;
+				}
+
 				// Point the head to its next's next node
 				if (!head->next.cas(next, next_next, next_stamp, next_stamp + 1))
 					continue;
