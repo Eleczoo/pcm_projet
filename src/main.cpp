@@ -13,7 +13,7 @@
 
 
 #define NB_THREADS 6
-#define LIMIT_MAX_PATH 8
+#define LIMIT_MAX_PATH 12
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -61,12 +61,12 @@ static void branch_and_bound(Path* current);
 void reset_counters(int size);
 void print_counters();
 
-void segfault_sigaction(int signal, siginfo_t *si, void *arg)
-{
-	// Print colored error message
-    std::cout << COLOR.RED << "Caught segfault at address " << si->si_addr << COLOR.ORIGINAL << std::endl;
-    exit(0);
-}
+//void segfault_sigaction(int signal, siginfo_t *si, void *arg)
+//{
+//	// Print colored error message
+//    std::cout << COLOR.RED << "Caught segfault at address " << si->si_addr << COLOR.ORIGINAL << std::endl;
+//    exit(0);
+//}
 
 // ! https://github.com/vmarkovtsev/DeathHandler/tree/master
 
@@ -79,14 +79,14 @@ int main(int argc, char* argv[])
 
 	// exit(0);
 
-	struct sigaction sa;
+	//struct sigaction sa;
 
-    memset(&sa, 0, sizeof(struct sigaction));
-    sigemptyset(&sa.sa_mask);
-    sa.sa_sigaction = segfault_sigaction;
-    sa.sa_flags   = SA_SIGINFO;
+    //memset(&sa, 0, sizeof(struct sigaction));
+    //sigemptyset(&sa.sa_mask);
+    //sa.sa_sigaction = segfault_sigaction;
+    //sa.sa_flags   = SA_SIGINFO;
 
-    sigaction(SIGSEGV, &sa, NULL);
+    //sigaction(SIGSEGV, &sa, NULL);
 
 	//Debug::DeathHandler dh;
 
@@ -196,9 +196,9 @@ void worker_routine(int id)
 	// g_mutex.lock();
 
 	//std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
-	std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
-	std::cout << id  <<" - " << "total : " << global.total << std::endl;
-	std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+	// std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
+	// std::cout << id  <<" - " << "total : " << global.total << std::endl;
+	// std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 
 	while (1)
 	{
@@ -226,15 +226,15 @@ void worker_routine(int id)
 
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
-			std::cout << id  <<" - " << "exit" << std::endl;
+			// std::cout << id  <<" - " << "exit" << std::endl;
 			// g_mutex.unlock();
 
-			std::cout << id  << "EXITING NORMALY" << std::endl;
-			std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
-			std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
-			std::cout << id  <<" - " << "total : " << global.total << std::endl;
-			printf("%d - counted_non_null : %lld\n", id, count_non_nul);
-			printf("%d - counted_enqueue : %lld\n", id, count_enqueue+1);
+			// std::cout << id  << "EXITING NORMALY" << std::endl;
+			// std::cout << id  <<" - " << "cleared_paths: " << cleared_paths << std::endl;
+			// std::cout << id  <<" - " << "verified : " << global.counter.verified << std::endl;
+			// std::cout << id  <<" - " << "total : " << global.total << std::endl;
+			// printf("%d - counted_non_null : %lld\n", id, count_non_nul);
+			// printf("%d - counted_enqueue : %lld\n", id, count_enqueue+1);
 			
 			break;
 		}
@@ -245,9 +245,9 @@ void worker_routine(int id)
 		p = g_fifo.dequeue();
 		if(p != nullptr)
 		{
-			g_mutex.lock();
-			count_non_nul++;
-			g_mutex.unlock();
+			// g_mutex.lock();
+			// count_non_nul++;
+			// g_mutex.unlock();
 		}
 
 		// std::cout << id  <<" - " << "path : " << p << std::endl;
@@ -256,7 +256,7 @@ void worker_routine(int id)
 		{
 			//printf("COULD NOT DEQUEUE\n");
 			// std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
-			temp++;
+			//temp++;
 			if (temp > 9000000)
 			{
 				g_fifo.show_queue();
@@ -291,7 +291,7 @@ void worker_routine(int id)
 			// global.counter.bound[p->size()]++;
 			// g_mutex.unlock();
 			__atomic_fetch_add(&global.counter.bound[p->size()], 1, __ATOMIC_RELAXED);
-
+			delete p;
 			continue; 
 		}
 
@@ -340,9 +340,9 @@ void worker_routine(int id)
 
 					g_fifo.enqueue(new_p);
 
-					g_mutex.lock();
-					count_enqueue++;
-					g_mutex.unlock();
+					// g_mutex.lock();
+					// count_enqueue++;
+					// g_mutex.unlock();
 					
 					// std::cout << id  <<" - " << "enqueing : " << x << std::endl;
 				}
@@ -352,6 +352,7 @@ void worker_routine(int id)
 				}
 			}
 		}
+		delete p;
 	}
 	// g_mutex.unlock();
 }
@@ -378,12 +379,12 @@ static void branch_and_bound(Path* current)
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			
-			g_mutex.lock();
+			// g_mutex.lock();
 			// std::cout << "new shortest: " << current->distance() << '\n';
 			// std::cout << "old shortest: " << global.shortest->distance() << '\n';
 			global.shortest->copy(current);
 			// global.counter.found++;
-			g_mutex.unlock();
+			// g_mutex.unlock();
 			// if (global.verbose & VER_COUNTERS)
 			__atomic_fetch_add(&global.counter.found, 1, __ATOMIC_RELAXED);
 		}

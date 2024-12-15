@@ -22,8 +22,8 @@
 #define COLOR_CYAN    "\x1b[36m"
 #define COLOR_RESET   "\x1b[0m"
 
-#define NB_THREADS_CONSUMER 50
-#define NB_THREADS_PRODUCER 50
+#define NB_THREADS_CONSUMER 5
+#define NB_THREADS_PRODUCER 5
 #define MAX_PUSH   1500 // per thread
 
 LockFreeQueue g_fifo;

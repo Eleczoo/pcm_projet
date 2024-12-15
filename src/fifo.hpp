@@ -23,8 +23,8 @@
 // #define DEBUG 1
 
 
-typedef uint32_t DATA;
-// typedef Path DATA;
+// typedef uint32_t DATA;
+typedef Path DATA;
 
 class Node
 {
@@ -76,7 +76,7 @@ private:
 
 	atomic_stamped<Node> fifo[2];
 	atomic_stamped<Node> free_nodes[2];
-	Node fnodes[NB_FREE_NODES]; // Actually free nodes
+	//Node fnodes[NB_FREE_NODES]; // Actually free nodes
 	// DATA values[NB_FREE_NODES]; // VALUES 
 
 	int64_t size;
@@ -98,14 +98,14 @@ LockFreeQueue::LockFreeQueue()
 
     //auto start = std::chrono::system_clock::now();
 
-	for (int i = 0; i < NB_FREE_NODES - 1; i++)
-	{
-		fnodes[i].next.set(&fnodes[i + 1], 0);
-		// values[i] = 100 + i;
-		// fnodes[i].value = &values[i];
-	}
+	//for (int i = 0; i < NB_FREE_NODES - 1; i++)
+	//{
+	//	fnodes[i].next.set(&fnodes[i + 1], 0);
+	//	// values[i] = 100 + i;
+	//	// fnodes[i].value = &values[i];
+	//}
 
-	fnodes[NB_FREE_NODES - 1].next.set(nullptr, 0);
+	//fnodes[NB_FREE_NODES - 1].next.set(nullptr, 0);
 	// values[NB_FREE_NODES - 1] = 100 + NB_FREE_NODES - 1;
 	// fnodes[NB_FREE_NODES - 1].value = &values[NB_FREE_NODES - 1];
 
@@ -113,8 +113,8 @@ LockFreeQueue::LockFreeQueue()
 	fifo[HEAD].set(&sentinel, 0); 
 	fifo[TAIL].set(&sentinel, 0);
 
-	free_nodes[HEAD].set(&fnodes[0], 0);
-	free_nodes[TAIL].set(&fnodes[NB_FREE_NODES-1], 0);
+	//free_nodes[HEAD].set(&fnodes[0], 0);
+	//free_nodes[TAIL].set(&fnodes[NB_FREE_NODES-1], 0);
 
 	// printf("---- JUST AFTER CREATING THE FIFO ----\n");
 	// __show_queue(fifo);
@@ -159,8 +159,8 @@ bool LockFreeQueue::enqueue(DATA* value)
 	
 	__enqueue_node(fifo, node);
 
-	//this->size++;
-	__atomic_fetch_add(&this->size, 1, __ATOMIC_RELAXED);
+	this->size++;
+	//__atomic_fetch_add(&this->size, 1, __ATOMIC_RELAXED);
 
 	return true;
 }
