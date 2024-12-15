@@ -16,8 +16,8 @@
 // #define DEBUG 1
 
 
-// typedef uint32_t DATA;
-typedef Path DATA;
+typedef uint32_t DATA;
+// typedef Path DATA;
 
 class Node
 {
@@ -245,7 +245,12 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 			{
 				// Finish the operation for the other thread
 				if(next == tail)
+				{
 					printf("! SAME VALUES ! %p %p\n", next, tail);	
+					printf("FIFO Content");
+					__show_queue(fifo);
+					exit(1);
+				}
 
 				//printf("CAS TAIL %p %p\n", tail, next);
 				
@@ -305,8 +310,8 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 				if (!next) 
 				{
 					#ifdef DEBUG
-					std::cout << "--- END DEQUEUE NULL PTR" << std::endl;
 					#endif
+					std::cout << "--- END DEQUEUE NULL PTR" << std::endl;
 					return nullptr;
 				}
 
@@ -355,8 +360,10 @@ void LockFreeQueue::__show_queue(atomic_stamped<Node>* fifo)
 	Node* tail = fifo[TAIL].get(stamp_osef);
 
 	printf("-------\n");
-	printf("show_queue() HEAD  :     (%p)\n", current);
-	printf("show_queue() TAIL  :     (%p)\n", tail);
+	// printf("show_queue() HEAD  :     (%p) -> %p\n", fifo[HEAD], current);
+	// printf("show_queue() TAIL  :     (%p) -> %p\n", fifo[TAIL], tail);
+	printf("show_queue() HEAD  :     (%p) -> %p\n", &fifo[HEAD], fifo[HEAD]);
+	printf("show_queue() TAIL  :     (%p) -> %p\n", &fifo[TAIL], fifo[TAIL]);
 
 	while (current != fifo[TAIL].get(stamp_osef))
 	{

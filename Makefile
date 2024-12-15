@@ -22,6 +22,15 @@ main: build/main.o
 build/main.o: src/main.cpp src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp src/fifo.hpp
 	$(CC) $(CFLAGS) -c src/main.cpp -o $@ -latomic
 
+
+
+fifo: build/fifo_test.o
+	$(CC) -o build/fifo_test $(LDFLAGS) build/fifo_test.o -latomic -ldl
+
+build/fifo_test.o: src/test_fifo.c src/graph.hpp src/path.hpp src/tspfile.hpp src/atomic.hpp src/fifo.hpp
+	$(CC) $(CFLAGS) -c src/test_fifo.c -o $@ -latomic
+
+
 omp:
 	make main CFLAGS="-fopenmp -O3" LDFLAGS="-fopenmp -O3"
 

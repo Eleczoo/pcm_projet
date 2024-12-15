@@ -257,7 +257,7 @@ void worker_routine(int id)
 			//printf("COULD NOT DEQUEUE\n");
 			// std::cout << id  <<" - " << COLOR.RED << "COULD NOT DEQUEUE" << COLOR.ORIGINAL  << std::endl;
 			temp++;
-			if (temp > 900000)
+			if (temp > 9000000)
 			{
 				g_fifo.show_queue();
 				printf("%d - EXITING BECAUSE I COULD NOT GET QUEUE\n", id);

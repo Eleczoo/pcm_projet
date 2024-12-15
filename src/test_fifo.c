@@ -14,16 +14,16 @@
 #include <thread>
 
 #define NB_THREADS 10
-#define MAX_PUSH   10000 // per thread
+#define MAX_PUSH   250 // per thread
 
 LockFreeQueue g_fifo;
 void		  worker_routine(int id);
 
 typedef uint32_t DATA;
 
-// DATA p = 69;
 
-DATA  p = 169;
+DATA p = 69;
+// DATA  p = Path();
 DATA* p2;
 
 int main()
@@ -45,16 +45,16 @@ int main()
 		workers[i].join();
 
 
-	g_fifo.show_queue();
-	// DATA* t;
-	// while (1)
-	// {
-	// 	t = g_fifo.dequeue();
-	// 	if (t == nullptr)
-	// 		break;
-	// 	counter++;
-	// }
-	// printf("Number of dequeued elements : %d\n", counter);
+	// g_fifo.show_queue();
+	//  DATA* t;
+	//  while (1)
+	//  {
+	//  	t = g_fifo.dequeue();
+	//  	if (t == nullptr)
+	//  		break;
+	//  	counter++;
+	//  }
+	//  printf("Number of dequeued elements : %d\n", counter);
 }
 
 void worker_routine(int id)
@@ -91,7 +91,7 @@ void worker_routine(int id)
 			else
 			{
 				notdqueued++;
-				printf("[%d] Couldnt dequeue\n", id);
+				// printf("[%d] Couldnt dequeue\n", id);
 			}
 		}
 
