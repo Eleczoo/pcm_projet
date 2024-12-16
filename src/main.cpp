@@ -12,8 +12,8 @@
 //#include "death_handler.h"
 
 
-#define NB_THREADS 6
-#define LIMIT_MAX_PATH 7
+#define NB_THREADS 1
+#define LIMIT_MAX_PATH 17
 
 enum Verbosity {
 	VER_NONE = 0,

@@ -489,3 +489,170 @@ Elapsed Time: 338.223815 seconds
 ----------------------------------------
 
 ```
+
+
+
+
+
+
+
+
+## Mesures de temps sequentielles sur le serveur
+
+```
+Results for ./tspcc executions:
+
+Command: ./tspcc ./data/dj1.tsp
+Standard Output:
+shortest [0: 0, 0]
+
+Standard Error:
+
+Elapsed Time: 0.009876 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj2.tsp
+Standard Output:
+shortest [582: 0, 1, 0]
+
+Standard Error:
+
+Elapsed Time: 0.009508 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj3.tsp
+Standard Output:
+shortest [1598: 0, 1, 2, 0]
+
+Standard Error:
+
+Elapsed Time: 0.010283 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj4.tsp
+Standard Output:
+shortest [1602: 0, 1, 3, 2, 0]
+
+Standard Error:
+
+Elapsed Time: 0.009648 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj5.tsp
+Standard Output:
+shortest [1719: 0, 1, 3, 4, 2, 0]
+
+Standard Error:
+
+Elapsed Time: 0.009653 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj6.tsp
+Standard Output:
+shortest [1818: 0, 1, 5, 4, 2, 3, 0]
+
+Standard Error:
+
+Elapsed Time: 0.010183 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj7.tsp
+Standard Output:
+shortest [1883: 0, 1, 5, 6, 4, 2, 3, 0]
+
+Standard Error:
+
+Elapsed Time: 0.010587 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj8.tsp
+Standard Output:
+shortest [2101: 0, 1, 5, 7, 6, 4, 2, 3, 0]
+
+Standard Error:
+
+Elapsed Time: 0.011348 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj9.tsp
+Standard Output:
+shortest [2134: 0, 1, 5, 7, 8, 6, 4, 2, 3, 0]
+
+Standard Error:
+
+Elapsed Time: 0.016317 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj10.tsp
+Standard Output:
+shortest [2577: 0, 1, 3, 2, 4, 6, 8, 7, 5, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 0.025438 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj11.tsp
+Standard Output:
+shortest [3014: 0, 1, 3, 2, 4, 10, 8, 7, 6, 5, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 0.140659 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj12.tsp
+Standard Output:
+shortest [3026: 0, 1, 3, 2, 4, 10, 11, 8, 7, 6, 5, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 0.605279 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj13.tsp
+Standard Output:
+shortest [3125: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 12, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 4.111797 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj14.tsp
+Standard Output:
+shortest [3161: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 12, 13, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 8.862900 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj15.tsp
+Standard Output:
+shortest [3171: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 12, 14, 13, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 47.677794 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj16.tsp
+Standard Output:
+shortest [3226: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 15, 12, 14, 13, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 234.202183 seconds
+----------------------------------------
+
+Command: ./tspcc ./data/dj17.tsp
+Standard Output:
+shortest [3249: 0, 1, 3, 2, 4, 5, 6, 7, 8, 11, 10, 16, 15, 12, 14, 13, 9, 0]
+
+Standard Error:
+
+Elapsed Time: 1169.255122 seconds
+----------------------------------------
+
+```
