@@ -11,7 +11,12 @@ Issues:
 ## 13/12/2024
 Issues:
 1. Fucking sanitizer fixes some issues ???!!!
-2. Error below pops up when adding more pushes into queues
+
+
+## CURRENT ISSUES
+- Not free pool
+- Address sanitizer 
+- No altruism, not helping others to finish their work in the queue
 
 
 
@@ -26,16 +31,12 @@ Command: ./tspcc ./data/dj1.tsp
 Standard Output:
 shortest [0: 0, 0]
 
-Standard Error:
-
 Elapsed Time: 0.002978 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj2.tsp
 Standard Output:
 shortest [582: 0, 1, 0]
-
-Standard Error:
 
 Elapsed Time: 0.003160 seconds
 ----------------------------------------
@@ -44,16 +45,12 @@ Command: ./tspcc ./data/dj3.tsp
 Standard Output:
 shortest [1598: 0, 1, 2, 0]
 
-Standard Error:
-
 Elapsed Time: 0.002428 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj4.tsp
 Standard Output:
 shortest [1602: 0, 1, 3, 2, 0]
-
-Standard Error:
 
 Elapsed Time: 0.002178 seconds
 ----------------------------------------
@@ -62,16 +59,12 @@ Command: ./tspcc ./data/dj5.tsp
 Standard Output:
 shortest [1719: 0, 1, 3, 4, 2, 0]
 
-Standard Error:
-
 Elapsed Time: 0.002815 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj6.tsp
 Standard Output:
 shortest [1818: 0, 1, 5, 4, 2, 3, 0]
-
-Standard Error:
 
 Elapsed Time: 0.002428 seconds
 ----------------------------------------
@@ -80,16 +73,12 @@ Command: ./tspcc ./data/dj7.tsp
 Standard Output:
 shortest [1883: 0, 1, 5, 6, 4, 2, 3, 0]
 
-Standard Error:
-
 Elapsed Time: 0.003010 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj8.tsp
 Standard Output:
 shortest [2101: 0, 1, 5, 7, 6, 4, 2, 3, 0]
-
-Standard Error:
 
 Elapsed Time: 0.002851 seconds
 ----------------------------------------
@@ -98,16 +87,12 @@ Command: ./tspcc ./data/dj9.tsp
 Standard Output:
 shortest [2134: 0, 1, 5, 7, 8, 6, 4, 2, 3, 0]
 
-Standard Error:
-
 Elapsed Time: 0.004058 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj10.tsp
 Standard Output:
 shortest [2577: 0, 1, 3, 2, 4, 6, 8, 7, 5, 9, 0]
-
-Standard Error:
 
 Elapsed Time: 0.010198 seconds
 ----------------------------------------
@@ -116,16 +101,12 @@ Command: ./tspcc ./data/dj11.tsp
 Standard Output:
 shortest [3014: 0, 1, 3, 2, 4, 10, 8, 7, 6, 5, 9, 0]
 
-Standard Error:
-
 Elapsed Time: 0.034190 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj12.tsp
 Standard Output:
 shortest [3026: 0, 1, 3, 2, 4, 10, 11, 8, 7, 6, 5, 9, 0]
-
-Standard Error:
 
 Elapsed Time: 0.166892 seconds
 ----------------------------------------
@@ -134,16 +115,12 @@ Command: ./tspcc ./data/dj13.tsp
 Standard Output:
 shortest [3125: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 12, 9, 0]
 
-Standard Error:
-
 Elapsed Time: 1.051346 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj14.tsp
 Standard Output:
 shortest [3161: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 12, 13, 9, 0]
-
-Standard Error:
 
 Elapsed Time: 2.346247 seconds
 ----------------------------------------
@@ -152,16 +129,12 @@ Command: ./tspcc ./data/dj15.tsp
 Standard Output:
 shortest [3171: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 12, 14, 13, 9, 0]
 
-Standard Error:
-
 Elapsed Time: 10.504623 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj16.tsp
 Standard Output:
 shortest [3226: 0, 1, 3, 2, 4, 5, 6, 7, 8, 10, 11, 15, 12, 14, 13, 9, 0]
-
-Standard Error:
 
 Elapsed Time: 37.298841 seconds
 ----------------------------------------
@@ -170,16 +143,12 @@ Command: ./tspcc ./data/dj17.tsp
 Standard Output:
 shortest [3249: 0, 1, 3, 2, 4, 5, 6, 7, 8, 11, 10, 16, 15, 12, 14, 13, 9, 0]
 
-Standard Error:
-
 Elapsed Time: 184.547035 seconds
 ----------------------------------------
 
 Command: ./tspcc ./data/dj18.tsp
 Standard Output:
 shortest [3270: 0, 1, 3, 2, 4, 5, 6, 7, 8, 11, 10, 16, 17, 15, 12, 14, 13, 9, 0]
-
-Standard Error:
 
 Elapsed Time: 1037.006030 seconds
 ----------------------------------------

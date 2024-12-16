@@ -224,6 +224,7 @@ void worker_routine(int id)
 		// std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
 
 
+		//  ! ----- STOP CONDITION ----- ! 
 		if((global.counter.verified + cleared_paths) >= global.total)
 		{
 			// std::cout << id  <<" - " << "exit" << std::endl;
