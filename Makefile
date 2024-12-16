@@ -1,15 +1,15 @@
 #  Copyright (c) 2012 Marcelo Pasin. All rights reserved.
 
-CC=clang++
-#CC=g++
-#LDFLAGS= -O3 -lm -g
-#CFLAGS= -O3 -Wall -g
+#CC=clang++
+CC=g++
+LDFLAGS= -O3 -lm -g
+CFLAGS= -O3 -Wall -g
 
 # LDFLAGS= -O0 -Wall -Wno-format -lm -g
 # CFLAGS= -O0 -Wall -Wno-format -g
 
-CFLAGS= -O3 -Wall -fsanitize=address,alignment -Watomic-alignment -g
-LDFLAGS= -O3 -lm -fsanitize=address,alignment -Watomic-alignment -g
+#CFLAGS= -O3 -Wall -fsanitize=address,alignment -Watomic-alignment -g
+#LDFLAGS= -O3 -lm -fsanitize=address,alignment -Watomic-alignment -g
 #CFLAGS= -O3 -Wall -fsanitize=address,alignment  -g
 #LDFLAGS= -O3 -lm -fsanitize=address,alignment  -g
 

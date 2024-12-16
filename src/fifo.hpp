@@ -173,15 +173,23 @@ void LockFreeQueue::__enqueue_node(atomic_stamped<Node>* queue, Node* node)
 
 	while (true)
 	{
-		__sync_synchronize();
+		// __sync_synchronize();
 		tail = queue[TAIL].get(tail_stamp);
 		next = tail->next.get(next_stamp);
-
-		if(tail->next.cas(nullptr, node, next_stamp, next_stamp + 1))
+		if(tail == queue[TAIL].get(tail_stamp))
 		{
-			if(!queue[TAIL].cas(tail, node, tail_stamp, tail_stamp + 1))
-				continue;
-			return;
+			if(next == nullptr)
+			{
+				if(tail->next.cas(next, node, next_stamp, next_stamp + 1))
+				{
+					queue[TAIL].cas(tail, node, tail_stamp, tail_stamp + 1);
+					return;
+				}
+			}
+			else
+			{
+				queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
+			}
 		}
 	}
 }
@@ -193,7 +201,7 @@ DATA* LockFreeQueue::dequeue()
 	if(n != nullptr)
 	{	
 		data = n->value;
-		delete n;
+		//delete n;
 		// __free_node(n);
 		return data;
 	}
@@ -206,8 +214,6 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 	Node* head;
 	Node* tail;
 	Node* next;
-	Node* next_next;
-	Node* tail_next;
 	uint64_t head_stamp, tail_stamp, next_stamp;
 
 	#ifdef DEBUG
@@ -216,7 +222,7 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 	
 	while (true)
 	{
-		__sync_synchronize();
+		// __sync_synchronize();
 		head = queue[HEAD].get(head_stamp);
 		tail = queue[TAIL].get(tail_stamp);
 		next = head->next.get(next_stamp);
@@ -239,20 +245,13 @@ Node* LockFreeQueue::__dequeue_node(atomic_stamped<Node>* queue)
 				#ifdef DEBUG
 				std::cout << "--- DEQUEUE HELP" << std::endl;
 				#endif
-				//queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
+				queue[TAIL].cas(tail, next, tail_stamp, tail_stamp + 1);
 			}
 			else
 			{
-				if(next)
+				if(queue[HEAD].cas(head, next, head_stamp, head_stamp + 1))
 				{
-					if(queue[HEAD].cas(head, next, head_stamp, head_stamp + 1))
-					{
-						return next;
-					}
-				}
-				else
-				{
-					return nullptr;
+					return next;
 				}
 			}
 		}

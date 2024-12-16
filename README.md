@@ -13,7 +13,7 @@ Issues:
 1. Fucking sanitizer fixes some issues ???!!!
 
 
-## CURRENT ISSUES
+## CURRENT ISSUES / OPTIS
 - Not free pool
 - Address sanitizer 
 - No altruism, not helping others to finish their work in the queue
