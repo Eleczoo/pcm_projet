@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mutex>
-//#include "death_handler.h"
-
 
 #define NB_THREADS 6
 #define LIMIT_MAX_PATH 8
@@ -54,6 +52,7 @@ static const struct {
 
 LockFreeQueue g_fifo;
 Graph* g_graph;
+uint32_t limit_max_path;
 
 // ! PROTOTYPES
 void worker_routine(int id);
@@ -61,40 +60,51 @@ static void branch_and_bound(Path* current);
 void reset_counters(int size);
 void print_counters();
 
-//void segfault_sigaction(int signal, siginfo_t *si, void *arg)
-//{
-//	// Print colored error message
-//    std::cout << COLOR.RED << "Caught segfault at address " << si->si_addr << COLOR.ORIGINAL << std::endl;
-//    exit(0);
-//}
-
-// ! https://github.com/vmarkovtsev/DeathHandler/tree/master
-
-
 int main(int argc, char* argv[])
 {
 
 	char* fname = 0;
+	uint32_t nb_threads;
 	if (argc == 2) 
 	{
 		fname = argv[1];
 		global.verbose = VER_NONE;
+		nb_threads = NB_THREADS;
+		limit_max_path = LIMIT_MAX_PATH;
 	} 
 	else 
 	{
-		if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'v')
+		// ! HARDCODED NB THREAD AND LIMIT FOR FURTHER TESTS
+		// ! ARGV[2] : NB THREADS
+		// ! ARGV[3] : LIMIT MAX PATH
+		if (argc == 4 )
 		{
-			global.verbose = (Verbosity) (argv[1][2] ? atoi(argv[1]+2) : 1);
-			fname = argv[2];
+			fname = argv[1];
+			nb_threads = atoi(argv[2]);
+			limit_max_path = atoi(argv[3]);
+			global.verbose = VER_NONE;
+
+			if(nb_threads < 1 || limit_max_path < 1)
+			{
+				fprintf(stderr, "Cannot have less than 1 Thread or less than 1 max path limit");
+				exit(1);
+			}
+		
 		} 
 		else
 		{
-			fprintf(stderr, "usage: %s [-v#] filename\n", argv[0]);
+			fprintf(stderr, "usage: %s {Data Path} {Number of threads} {Limit max paths}\n", argv[0]);
 			exit(1);
 		}
 	}
 
 	g_graph = TSPFile::graph(fname);
+	if(g_graph->size() < 2)
+	{
+		fprintf(stderr, "Graph size is too small, need more cities\n");
+		exit(1);
+	}
+
 	if (global.verbose & VER_GRAPH)
 		std::cout << COLOR.BLUE << g_graph << COLOR.ORIGINAL;
 
@@ -114,18 +124,19 @@ int main(int argc, char* argv[])
 	g_fifo.enqueue(current);
 
 	// ! WORKERS
-	std::cout << "Starting " << NB_THREADS << " threads\n";
-	std::thread workers[NB_THREADS];
-	for (int i = 0; i < NB_THREADS; i++)
+	// std::cout << "Starting " << nb_threads << " threads\n";
+	std::thread workers[nb_threads];
+	for (uint32_t i = 0; i < nb_threads; i++)
 		workers[i] = std::thread(worker_routine, i);
 
-	for (int i = 0; i < NB_THREADS; i++)
+	for (uint32_t i = 0; i < nb_threads; i++)
 		workers[i].join();
 
-	std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+	//std::cout << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
+	std::cout << "shortest " << global.shortest << '\n';
 
 	// if (global.verbose & VER_COUNTERS)
-	print_counters();
+	// print_counters();
 
 	return 0;
 }
@@ -141,7 +152,7 @@ void set(volatile uint64_t* addr, uint64_t curr, uint64_t next)
 void worker_routine(int id)
 {
 	// Print timestamp in hh:mm:ss::ms
-	std::cout << id  <<" - " << "STARTED WORKER " << id << std::endl;
+	// std::cout << id  <<" - " << "STARTED WORKER " << id << std::endl;
 	Path* p;
 	Path* new_p;
 
@@ -178,8 +189,6 @@ void worker_routine(int id)
 			continue;
 		}
 		
-
-
 		//auto start = std::chrono::system_clock::now();
 		// ? Check if the distance is already bigger than the min
 		if (p->distance() > global.shortest->distance()) 
@@ -194,7 +203,7 @@ void worker_routine(int id)
 
 
 		// ! 2. Check if we need to split the job
-		if (p->size() >= (p->max() - LIMIT_MAX_PATH))
+		if (p->size() >= (p->max() - (int)limit_max_path))
 		{
 			branch_and_bound(p);
 		}
@@ -224,6 +233,7 @@ static void branch_and_bound(Path* current)
 
 	if (current->leaf()) 
 	{
+		//printf("LEAF\n");
 		// this is a leaf
 		current->add(0);
 		__atomic_fetch_add(&global.counter.verified, 1, __ATOMIC_RELAXED);
