@@ -53,6 +53,8 @@ static const struct {
 LockFreeQueue g_fifo;
 Graph* g_graph;
 uint32_t limit_max_path;
+volatile uint32_t g_total_verified = 0;
+
 
 // ! PROTOTYPES
 void worker_routine(int id);
@@ -142,7 +144,7 @@ int main(int argc, char* argv[])
 }
 
 
-void set(volatile uint64_t* addr, uint64_t curr, uint64_t next)
+void atomic_set(uint32_t* addr, uint32_t curr, uint32_t next)
 {
 	while (!__atomic_compare_exchange(addr, &curr, &next, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 }
@@ -163,19 +165,21 @@ void worker_routine(int id)
 		uint64_t cleared_paths = 0;
 		// g_mutex.lock();
 
+		
 		//auto start = std::chrono::system_clock::now();
-		for (uint64_t i=0; i<global.size; i++) 
-		{
-			uint64_t e = global.fact[i] * global.counter.bound[i];
+		// for (uint64_t i=0; i<global.size; i++) 
+		// {
+		// 	uint64_t e = global.fact[i] * global.counter.bound[i];
 
-			cleared_paths += e;
-		}
+		// 	cleared_paths += e;
+		// }
 		//auto end = std::chrono::system_clock::now();
 
 		//printf("Time taken by factorial (ns) : %lld\n", std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count());
 
 		//  ! ----- STOP CONDITION ----- ! 
-		if((global.counter.verified + cleared_paths) >= global.total)
+		// if((global.counter.verified + cleared_paths) >= global.total)
+		if(g_total_verified >= global.total)
 			break;
 
 
@@ -193,8 +197,19 @@ void worker_routine(int id)
 		// ? Check if the distance is already bigger than the min
 		if (p->distance() > global.shortest->distance()) 
 		{
-			__atomic_fetch_add(&global.counter.bound[p->size()], 1, __ATOMIC_RELAXED);
+			//___atomic_fetch_add(&global.counter.bound[p->size()], 1, __ATOMIC_RELAXED);
+			__atomic_fetch_add(&g_total_verified, global.fact[p->size()], __ATOMIC_RELAXED);
 			delete p;
+
+			// for (uint64_t i=0; i<global.size; i++) 
+			// {
+			// 	uint64_t e = global.fact[i] * global.counter.bound[i];
+
+			// 	cleared_paths += e;
+			// }
+			// __atomic_store_n(&g_total_verified, (global.counter.verified + cleared_paths), __ATOMIC_RELAXED);
+			// printf("%d - g_total_verified = %d\n", id, g_total_verified);
+
 			continue; 
 		}
 		//auto end = std::chrono::system_clock::now();
@@ -206,6 +221,16 @@ void worker_routine(int id)
 		if (p->size() >= (p->max() - (int)limit_max_path))
 		{
 			branch_and_bound(p);
+
+			// for (uint64_t i=0; i<global.size; i++) 
+			// {
+			// 	uint64_t e = global.fact[i] * global.counter.bound[i];
+
+			// 	cleared_paths += e;
+			// }
+			// __atomic_store_n(&g_total_verified, (global.counter.verified + cleared_paths), __ATOMIC_RELAXED);
+			// printf("%d - g_total_verified = %d\n", id, g_total_verified);
+
 		}
 		else
 		{
@@ -236,7 +261,8 @@ static void branch_and_bound(Path* current)
 		//printf("LEAF\n");
 		// this is a leaf
 		current->add(0);
-		__atomic_fetch_add(&global.counter.verified, 1, __ATOMIC_RELAXED);
+		//__atomic_fetch_add(&global.counter.verified, 1, __ATOMIC_RELAXED);
+		__atomic_fetch_add(&g_total_verified, 1, __ATOMIC_RELAXED);
 
 
 		if (current->distance() < global.shortest->distance()) 
@@ -269,7 +295,8 @@ static void branch_and_bound(Path* current)
 		{
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
-			__atomic_fetch_add(&global.counter.bound[current->size()], 1, __ATOMIC_RELAXED);
+			//__atomic_fetch_add(&global.counter.bound[current->size()], 1, __ATOMIC_RELAXED);
+			__atomic_fetch_add(&g_total_verified, global.fact[current->size()], __ATOMIC_RELAXED);
 		}
 
 	}
