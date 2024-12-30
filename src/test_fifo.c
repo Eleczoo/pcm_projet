@@ -37,7 +37,6 @@ typedef uint32_t DATA;
 uint32_t g_dq_count = 0;
 
 DATA p = 69;
-// DATA  p = Path();
 
 
 int main()

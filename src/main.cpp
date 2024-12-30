@@ -12,8 +12,8 @@
 //#include "death_handler.h"
 
 
-#define NB_THREADS 1
-#define LIMIT_MAX_PATH 17
+#define NB_THREADS 6
+#define LIMIT_MAX_PATH 8
 
 enum Verbosity {
 	VER_NONE = 0,
@@ -144,7 +144,6 @@ void worker_routine(int id)
 	std::cout << id  <<" - " << "STARTED WORKER " << id << std::endl;
 	Path* p;
 	Path* new_p;
-	int temp = 0; // Remove this
 
 	while (1)
 	{
@@ -175,21 +174,7 @@ void worker_routine(int id)
 
 		if(p == nullptr)
 		{
-		//	//temp++;
-		//	if (temp > 9000000)
-		//	{
-		//		g_fifo.show_queue();
-		//		printf("%d - EXITING BECAUSE I COULD NOT GET QUEUE\n", id);
-		//		printf("%d - cleared_paths: %lu\n", id, cleared_paths);
-		//		printf("%d - verified : %lu\n", id, global.counter.verified);
-		//		printf("%d - total : %lu\n", id, global.total);
-		//		printf("%d - diff : %lld\n",id, global.total - (cleared_paths + global.counter.verified)  );
-		//		printf("%d - counted_non_null : %lld\n", id, count_non_nul);
-		//		printf("%d - counted_enqueue : %lld\n", id, count_enqueue+1);
-		//		// std::cout << id  <<" - " << COLOR.RED << "shortest " << global.shortest << COLOR.ORIGINAL << '\n';
-		//		break;
-		//	}
-			
+			usleep(50);
 			continue;
 		}
 		
