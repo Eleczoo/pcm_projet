@@ -4,3 +4,5 @@
 build/*
 .vscode
 perf.data*
+RESULTS
+mesures.log
