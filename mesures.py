@@ -73,8 +73,6 @@ def main():
 
 			for limit in range(real_limit, city_index + 1):
 
-				print(f"{tsp_file}\n- {nb_threads} Thread(s)\n- {limit} limit", end="\n\n")
-
 				command = ["./build/main", tsp_file, str(nb_threads), str(limit)]
 
 				with open(output_file, "a", newline="") as csvfile:
@@ -101,6 +99,9 @@ def main():
 
 					except Exception as e:
 						logging.error(f"Error running command {' '.join(command)}:\n{str(e)}\n")
+				
+				print(f"{tsp_file}\n- {nb_threads} Thread(s)\n- {limit} limit\n {elp_ms} ms", end="\n\n")
+
 
 if __name__ == "__main__":
 	main()
