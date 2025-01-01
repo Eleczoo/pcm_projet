@@ -3,7 +3,8 @@
 #include "atomic.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
-#include "fifo.hpp"
+#include "stack.hpp"
+//#include "fifo.hpp"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,6 @@ enum Verbosity {
 	VER_COUNTERS = 16,
 };
 
-std::mutex g_mutex;
 uint64_t count_non_nul = 0;
 uint64_t count_enqueue = 0;
 
@@ -50,7 +50,7 @@ static const struct {
 	.ORIGINAL = { 27, '[', '3', '9', 'm', 0 },
 };
 
-LockFreeQueue g_fifo;
+LockFreeStack g_stack;
 Graph* g_graph;
 uint32_t limit_max_path;
 volatile uint64_t g_total_verified = 0;
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 
 	Path* current = new Path(g_graph);
 	current->add(0);
-	// g_fifo.enqueue(current);
+	// g_stack.enqueue(current);
 
 
 	Path* new_p;
@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
 		if (!current->contains(x))
 		{
 			new_p->add(x);
-			g_fifo.enqueue(new_p);
+			g_stack.enqueue(new_p);
 		}
 	}
 
@@ -171,11 +171,12 @@ void worker_routine(int id)
 		if(g_total_verified >= global.total)
 			break;
 
-		p = g_fifo.dequeue();
+		p = g_stack.dequeue();
 
 		if(p == nullptr)
 		{
-			usleep(100);
+			// Get random value
+			usleep((rand() % 100 + 1));
 			continue;
 		}
 		
@@ -203,7 +204,7 @@ void worker_routine(int id)
 					new_p = new Path(g_graph);
 					new_p->copy(p);
 					new_p->add(x);
-					g_fifo.enqueue(new_p);
+					g_stack.enqueue(new_p);
 				}
 			}
 		}
