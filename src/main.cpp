@@ -54,6 +54,7 @@ LockFreeQueue g_fifo;
 Graph* g_graph;
 uint32_t limit_max_path;
 volatile uint64_t g_total_verified = 0;
+Path* g_shortests_paths[256];
 
 
 
@@ -146,18 +147,24 @@ int main(int argc, char* argv[])
 
 	for (uint32_t i = 0; i < nb_threads; i++)
 		workers[i].join();
+		
+	// Get the minimum path from the shortest paths
+	// By checking the distance
+	Path* final_shortest = new Path(g_graph);
+	final_shortest->copy(g_shortests_paths[0]);
 
-	std::cout << "shortest " << global.shortest << '\n';
+	for(uint32_t i = 0; i < nb_threads; i++)
+	{
+		if(g_shortests_paths[i]->distance() < final_shortest->distance())
+		{
+			final_shortest->copy(g_shortests_paths[i]);
+		}
+	}
+
+	std::cout << "shortest " << final_shortest << '\n';
 	
 	return 0;
 }
-
-
-void atomic_set(uint32_t* addr, uint32_t curr, uint32_t next)
-{
-	while (!__atomic_compare_exchange(addr, &curr, &next, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
-}
-
 
 
 void worker_routine(int id)
@@ -176,8 +183,10 @@ void worker_routine(int id)
 		//  ! ----- STOP CONDITION ----- ! 
 		if(g_total_verified >= global.total)
 		{
-			printf("%d - shortest path : %d\n", id, local_shortest_path->distance());
-			std::cout << id << " - shortest " << local_shortest_path << '\n';
+			// printf("%d - shortest path : %d\n", id, local_shortest_path->distance());
+			// std::cout << id << " - shortest " << local_shortest_path << '\n';
+			g_shortests_paths[id] = local_shortest_path;
+			
 			break;
 		}
 
