@@ -59,7 +59,7 @@ volatile uint64_t g_total_verified = 0;
 
 // ! PROTOTYPES
 void worker_routine(int id);
-static void branch_and_bound(Path* current);
+static void branch_and_bound(Path* current, Path* p_shortest_path);
 void reset_counters(int size);
 void print_counters();
 
@@ -164,23 +164,33 @@ void worker_routine(int id)
 {
 	Path* p;
 	Path* new_p;
+	Path* local_shortest_path = new Path(g_graph);
+	for (int i=0; i<g_graph->size(); i++) 
+	{
+		local_shortest_path->add(i);
+	}
+	local_shortest_path->add(0);
 
 	while (1)
 	{
 		//  ! ----- STOP CONDITION ----- ! 
 		if(g_total_verified >= global.total)
+		{
+			printf("%d - shortest path : %d\n", id, local_shortest_path->distance());
+			std::cout << id << " - shortest " << local_shortest_path << '\n';
 			break;
+		}
 
 		p = g_fifo.dequeue();
 
 		if(p == nullptr)
 		{
-			usleep(100);
+			usleep(10);
 			continue;
 		}
 		
 		// ? Check if the distance is already bigger than the min
-		if (p->distance() > global.shortest->distance()) 
+		if (p->distance() > local_shortest_path->distance()) 
 		{
 			__atomic_fetch_add(&g_total_verified, global.fact[p->size()], __ATOMIC_RELAXED);
 			delete p;
@@ -191,7 +201,7 @@ void worker_routine(int id)
 		if (p->size() >= (p->max() - (int)limit_max_path))
 		{
 			// ? Limit reached, Actually do the job
-			branch_and_bound(p);
+			branch_and_bound(p, local_shortest_path);
 		}
 		else
 		{
@@ -211,8 +221,10 @@ void worker_routine(int id)
 	}
 }
 
-static void branch_and_bound(Path* current)
+// Returns the distance
+static void branch_and_bound(Path* current, Path* p_shortest_path)
 {
+	
 	if (global.verbose & VER_ANALYSE)
 		std::cout << "analysing " << current << '\n';
 
@@ -222,12 +234,13 @@ static void branch_and_bound(Path* current)
 		__atomic_fetch_add(&g_total_verified, 1, __ATOMIC_RELAXED);
 
 
-		if (current->distance() < global.shortest->distance()) 
+		if (current->distance() < p_shortest_path->distance()) 
 		{
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			
-			global.shortest->copy(current);
+			// global.shortest->copy(current);
+			p_shortest_path->copy(current);
 			__atomic_fetch_add(&global.counter.found, 1, __ATOMIC_RELAXED);
 		}
 		current->pop();
@@ -235,7 +248,7 @@ static void branch_and_bound(Path* current)
 	else 
 	{
 		// not yet a leaf
-		if (current->distance() < global.shortest->distance()) 
+		if (current->distance() < p_shortest_path->distance()) 
 		{
 			// continue branching
 			for (int i=1; i<current->max(); i++) 
@@ -243,7 +256,7 @@ static void branch_and_bound(Path* current)
 				if (!current->contains(i)) 
 				{
 					current->add(i);
-					branch_and_bound(current);
+					branch_and_bound(current, p_shortest_path);
 					current->pop();
 				}
 			}
