@@ -97,10 +97,11 @@ def main():
 						if result.stderr:
 							logging.error(f"Standard Error:{result.stderr}")
 
+						print(f"{tsp_file}\n- {nb_threads} Thread(s)\n- {limit} limit\n {elp_ms} ms", end="\n\n")
+
 					except Exception as e:
 						logging.error(f"Error running command {' '.join(command)}:\n{str(e)}\n")
 				
-				print(f"{tsp_file}\n- {nb_threads} Thread(s)\n- {limit} limit\n {elp_ms} ms", end="\n\n")
 
 
 if __name__ == "__main__":
