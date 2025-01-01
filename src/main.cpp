@@ -53,7 +53,7 @@ static const struct {
 LockFreeQueue g_fifo;
 Graph* g_graph;
 uint32_t limit_max_path;
-volatile uint32_t g_total_verified = 0;
+volatile uint64_t g_total_verified = 0;
 
 
 // ! PROTOTYPES
