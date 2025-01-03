@@ -60,7 +60,7 @@ Path* g_shortests_paths[256];
 
 // ! PROTOTYPES
 void worker_routine(int id);
-static void branch_and_bound(Path* current, Path* p_shortest_path);
+static uint64_t branch_and_bound(Path* current, Path* p_shortest_path);
 void reset_counters(int size);
 void print_counters();
 
@@ -183,8 +183,6 @@ void worker_routine(int id)
 		//  ! ----- STOP CONDITION ----- ! 
 		if(g_total_verified >= global.total)
 		{
-			// printf("%d - shortest path : %d\n", id, local_shortest_path->distance());
-			// std::cout << id << " - shortest " << local_shortest_path << '\n';
 			g_shortests_paths[id] = local_shortest_path;
 			
 			break;
@@ -210,7 +208,7 @@ void worker_routine(int id)
 		if (p->size() >= (p->max() - (int)limit_max_path))
 		{
 			// ? Limit reached, Actually do the job
-			branch_and_bound(p, local_shortest_path);
+			__atomic_fetch_add(&g_total_verified, branch_and_bound(p, local_shortest_path), __ATOMIC_RELAXED);
 		}
 		else
 		{
@@ -230,9 +228,9 @@ void worker_routine(int id)
 	}
 }
 
-// Returns the distance
-static void branch_and_bound(Path* current, Path* p_shortest_path)
+static uint64_t branch_and_bound(Path* current, Path* p_shortest_path)
 {
+	uint64_t verified_counter = 0;
 	
 	if (global.verbose & VER_ANALYSE)
 		std::cout << "analysing " << current << '\n';
@@ -248,9 +246,8 @@ static void branch_and_bound(Path* current, Path* p_shortest_path)
 			if (global.verbose & VER_SHORTER)
 				std::cout << "shorter: " << current << '\n';
 			
-			// global.shortest->copy(current);
 			p_shortest_path->copy(current);
-			__atomic_fetch_add(&global.counter.found, 1, __ATOMIC_RELAXED);
+			verified_counter++;
 		}
 		current->pop();
 	}
@@ -265,7 +262,7 @@ static void branch_and_bound(Path* current, Path* p_shortest_path)
 				if (!current->contains(i)) 
 				{
 					current->add(i);
-					branch_and_bound(current, p_shortest_path);
+					verified_counter += branch_and_bound(current, p_shortest_path);
 					current->pop();
 				}
 			}
@@ -275,10 +272,12 @@ static void branch_and_bound(Path* current, Path* p_shortest_path)
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
 
-			__atomic_fetch_add(&g_total_verified, global.fact[current->size()], __ATOMIC_RELAXED);
+			verified_counter += global.fact[current->size()];
 		}
 
 	}
+
+	return verified_counter;
 }
 
 
