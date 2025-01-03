@@ -59,7 +59,7 @@ volatile uint64_t g_total_verified = 0;
 
 // ! PROTOTYPES
 void worker_routine(int id);
-static void branch_and_bound(Path* current);
+static uint64_t branch_and_bound(Path* current);
 void reset_counters(int size);
 void print_counters();
 
@@ -153,13 +153,6 @@ int main(int argc, char* argv[])
 }
 
 
-void atomic_set(uint32_t* addr, uint32_t curr, uint32_t next)
-{
-	while (!__atomic_compare_exchange(addr, &curr, &next, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED));
-}
-
-
-
 void worker_routine(int id)
 {
 	Path* p;
@@ -178,7 +171,7 @@ void worker_routine(int id)
 			usleep(100);
 			continue;
 		}
-		
+
 		// ? Check if the distance is already bigger than the min
 		if (p->distance() > global.shortest->distance()) 
 		{
@@ -191,7 +184,7 @@ void worker_routine(int id)
 		if (p->size() >= (p->max() - (int)limit_max_path))
 		{
 			// ? Limit reached, Actually do the job
-			branch_and_bound(p);
+			__atomic_fetch_add(&g_total_verified, branch_and_bound(p), __ATOMIC_RELAXED);
 		}
 		else
 		{
@@ -211,16 +204,17 @@ void worker_routine(int id)
 	}
 }
 
-static void branch_and_bound(Path* current)
+static uint64_t branch_and_bound(Path* current)
 {
+	uint64_t verified_counter = 0;
+
 	if (global.verbose & VER_ANALYSE)
 		std::cout << "analysing " << current << '\n';
 
 	if (current->leaf()) 
 	{
 		current->add(0);
-		__atomic_fetch_add(&g_total_verified, 1, __ATOMIC_RELAXED);
-
+		verified_counter++;
 
 		if (current->distance() < global.shortest->distance()) 
 		{
@@ -228,7 +222,6 @@ static void branch_and_bound(Path* current)
 				std::cout << "shorter: " << current << '\n';
 			
 			global.shortest->copy(current);
-			__atomic_fetch_add(&global.counter.found, 1, __ATOMIC_RELAXED);
 		}
 		current->pop();
 	}
@@ -243,7 +236,7 @@ static void branch_and_bound(Path* current)
 				if (!current->contains(i)) 
 				{
 					current->add(i);
-					branch_and_bound(current);
+					verified_counter += branch_and_bound(current);
 					current->pop();
 				}
 			}
@@ -252,11 +245,13 @@ static void branch_and_bound(Path* current)
 		{
 			if (global.verbose & VER_BOUND )
 				std::cout << "bound " << current << '\n';
-
-			__atomic_fetch_add(&g_total_verified, global.fact[current->size()], __ATOMIC_RELAXED);
+			
+			verified_counter += global.fact[current->size()];
 		}
 
 	}
+
+	return verified_counter;
 }
 
 
