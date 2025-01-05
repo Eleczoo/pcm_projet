@@ -3,7 +3,8 @@
 #include "atomic.hpp"
 #include "path.hpp"
 #include "tspfile.hpp"
-#include "fifo.hpp"
+//#include "fifo.hpp"
+#include "stack.hpp"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +51,7 @@ static const struct {
 	.ORIGINAL = { 27, '[', '3', '9', 'm', 0 },
 };
 
-LockFreeQueue g_fifo;
+LockFreeStack g_fifo;
 Graph* g_graph;
 uint32_t limit_max_path;
 volatile uint64_t g_total_verified = 0;

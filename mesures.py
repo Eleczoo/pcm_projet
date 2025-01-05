@@ -11,7 +11,7 @@ import logging
 import csv
 
 
-MAX_LIMIT = 5
+MAX_LIMIT = 7
 MAX_NB_CITIES = 8 # ! WE NEED AT LEAST THIS MUCH FILES WITH ALL THE CITIES
 
 OUTPUT_DIR = "RESULTS"
@@ -57,7 +57,7 @@ BEST_PATHS = [
 
 
 def main():
-	for city_index in range(2, MAX_NB_CITIES+1):				
+	for city_index in [16]: #range(2, MAX_NB_CITIES+1):				
 		tsp_file = f"./data/dj{city_index}.tsp"
 		output_file = f"{OUTPUT_DIR}/dj{city_index}.csv"
 
@@ -71,8 +71,8 @@ def main():
 			if real_limit < 0:
 				real_limit = 0
 
-			for limit in range(real_limit, city_index + 1):
-
+			for limit in range(real_limit, city_index - 2):
+				print(f"--- CITY {city_index} ---")
 				command = ["./build/main", tsp_file, str(nb_threads), str(limit)]
 
 				with open(output_file, "a", newline="") as csvfile:
@@ -101,8 +101,6 @@ def main():
 
 					except Exception as e:
 						logging.error(f"Error running command {' '.join(command)}:\n{str(e)}\n")
-				
-
 
 if __name__ == "__main__":
 	main()

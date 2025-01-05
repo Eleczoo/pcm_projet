@@ -2,8 +2,8 @@
 
 #CC=clang++
 CC=g++
-LDFLAGS= -O3 -lm -g
-CFLAGS= -O3 -Wall -g
+LDFLAGS= -O3 -lm
+CFLAGS= -O3
 
 # LDFLAGS= -O0 -Wall -Wno-format -lm -g
 # CFLAGS= -O0 -Wall -Wno-format -g
